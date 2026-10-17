@@ -111,3 +111,33 @@ assert all(s == 200 for o in out for s in o), out
     env = {k: v for k, v in __import__("os").environ.items() if k != "TYPESAFE_API_KEY"}
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=300, env=env)
     assert r.returncode == 0, (r.returncode, r.stderr[-2000:])
+
+
+def test_reviewer_rejected_approval_stays_a_violation(client):
+    c = client.post("/check", json={"text": "Client dinner $48", "employee_id": "e_newhire", "timestamp": TS}).json()
+    a = client.post(f"/cases/{c['case_id']}/approve", json={"approver": "e_manager", "approved": False}).json()
+    assert a["verdict"] == "violation" and a["awaiting_approval"] is False and a["approval"]["approved"] is False
+    r = client.post(f"/cases/{c['case_id']}/authorize")
+    assert r.status_code == 409 and r.json()["detail"] == "not compliant"
+    assert client.get("/cases", params={"awaiting_approval": "true"}).json()["cases"] == []
+    assert client.post(f"/cases/{c['case_id']}/approve", json={"approver": "e_manager", "approved": True}).json()["verdict"] == "compliant"
+
+
+def test_reviewer_responses_hide_stored_inputs(client):
+    from api.models import Case
+    want = set(Case.model_fields)
+    c = client.post("/check", json={"text": "Client dinner $48", "employee_id": "e_newhire", "timestamp": TS}).json()
+    cid = c["case_id"]
+    got = [c, client.get(f"/cases/{cid}").json(), client.get("/cases").json()["cases"][0],
+           client.post(f"/cases/{cid}/answer", json={"fact": "receipt_attached", "value": True}).json(),
+           client.post(f"/cases/{cid}/approve", json={"approver": "e_manager", "approved": True}).json()]
+    assert all(set(x) == want for x in got), [set(x) ^ want for x in got]
+
+
+def test_reviewer_utc_and_bad_timestamps_unknown_case(client):
+    c = client.post("/check", json={"text": "Client dinner $48", "employee_id": "e_newhire",
+                                    "timestamp": "2026-10-17T19:30:00Z"}).json()
+    assert c["facts"]["hour"]["value"] == 12   # 19:30 UTC is 12:30 in Los Angeles
+    assert client.post("/check", json={"text": "x", "employee_id": "e_newhire", "timestamp": "garbage"}).status_code == 422
+    assert client.post("/cases/c_00000000/answer", json={"fact": "pre_approved", "value": True}).status_code == 404
+    assert client.post("/cases/c_00000000/approve", json={"approver": "e_manager", "approved": True}).status_code == 404
