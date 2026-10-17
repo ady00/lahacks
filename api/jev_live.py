@@ -40,8 +40,11 @@ def extract_with_meta(text: str) -> tuple[dict, dict]:
                        json={"model": "jev-latest", "state": text, "questions": QUESTIONS})
         r.raise_for_status()
         body = r.json()
+    except httpx.HTTPStatusError as e:
+        first = (e.response.text.strip().splitlines() or [""])[0][:200]
+        raise JevError(f"Jev HTTP {e.response.status_code}: {first}") from None
     except (httpx.HTTPError, ValueError) as e:
-        raise JevError(f"Jev request failed: {type(e).__name__}: {str(e)[:200]}") from None
+        raise JevError(f"Jev request failed: {type(e).__name__}") from None
     latency = round((time.perf_counter() - t0) * 1000)
     try:
         a = body["answers"]

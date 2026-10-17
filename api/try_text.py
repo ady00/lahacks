@@ -42,6 +42,12 @@ def load_env(path: Path) -> None:
             os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
 
 
+def parse_amount(text: str) -> float | None:
+    m = re.search(r"\$\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?", text)
+    amount = float(m.group(1).replace(",", "") + ("." + m.group(2) if m.group(2) else "")) if m else None
+    return amount if amount else None
+
+
 def run(P, text, employee, amount, timestamp, local):
     meta = {}
     if local:
@@ -49,8 +55,8 @@ def run(P, text, employee, amount, timestamp, local):
     else:
         probs, meta = jev_live.extract_with_meta(text)
     # ponytail: Task 8 replaces this block with api.cases.build_facts
-    if amount is None and (m := re.search(r"\$\s*(\d+(?:\.\d{1,2})?)", text)):
-        amount = float(m.group(1))
+    if amount is None:
+        amount = parse_amount(text)
     now = datetime.now(LA)
     if timestamp:
         ts = datetime.fromisoformat(timestamp)
@@ -67,15 +73,18 @@ def run(P, text, employee, amount, timestamp, local):
     for k, v in facts_from_probs(probs).items():
         facts[k], sources[k] = v, "local stub" if local else "jev"
     d = P.decide(facts, probs)
-    unknown = ["amount"] if amount is None else []
+    # the API's rule: undetermined with no yes/no question -> ask for the first missing amount/expense_kind
+    qs = list(d.questions)
+    if d.verdict.status == "undetermined" and not qs:
+        qs = [f for f in ("expense_kind", "amount") if f not in d.facts][:1]
     return {
         "text": text, "employee": employee, "jev": meta, "probs": probs,
         "facts": {k: {"value": v, "source": sources.get(k, "derived")} for k, v in d.facts.items()},
         "verdict": d.verdict.status,
         "violations": [{"rule": v.rule, "text": P.by_id[v.rule].text, "because": v.because} for v in d.verdict.violations],
         "fix": None if d.fix is None else [{"fact": s.fact, "from": s.from_, "to": s.to} for s in d.fix],
-        "questions": [question(f, (probs.get(f) or {}).get("p")) for f in d.questions],
-        "explanation": explain(d, P.by_id, unknown),
+        "questions": [question(f, (probs.get(f) or {}).get("p")) for f in qs],
+        "explanation": explain(d, P.by_id, qs),
     }
 
 
@@ -110,6 +119,11 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if not a.demo and not a.text:
         ap.error("give a text or --demo")
+    if a.timestamp:
+        try:
+            datetime.fromisoformat(a.timestamp)
+        except ValueError:
+            ap.error(f"--timestamp must be ISO 8601, e.g. 2026-10-17T19:30:00-07:00 (got {a.timestamp!r})")
     load_env(Path(a.env))
     P = load_policy(ENGINE / "demo_policy.json", ENGINE / "irs_pack.json")
     code = 0

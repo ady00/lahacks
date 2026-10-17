@@ -85,3 +85,10 @@ def test_reviewer_try_text_local_json_unicode_and_jev_failure(monkeypatch, capsy
     assert try_text.main(["x", "--env", "/dev/null"]) == 1
     err = capsys.readouterr().err
     assert err.count("\n") == 1 and "TYPESAFE_API_KEY not set" in err
+
+
+def test_http_error_is_one_line_without_key(monkeypatch):
+    _post(monkeypatch, 401, {"error": "bad\nkey"})
+    with pytest.raises(jev_live.JevError) as e:
+        jev_live.extract("x")
+    assert "\n" not in str(e.value) and str(e.value).startswith("Jev HTTP 401:") and "k" != str(e.value)
