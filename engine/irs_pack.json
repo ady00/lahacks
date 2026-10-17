@@ -1,0 +1,16 @@
+[
+  {"id": "IRS-meal", "layer": "irs", "text": "Business meals outside company-wide events are 50% deductible.",
+   "when": {"and": [{"eq": ["expense_kind", "meal"]}, {"not": "at_company_event"}]}, "require": {"eq": ["coded_account", "meals_50"]}},
+  {"id": "IRS-meal-event", "layer": "irs", "text": "Meals at company-wide events are 100% deductible.",
+   "when": {"and": [{"eq": ["expense_kind", "meal"]}, "at_company_event"]}, "require": {"eq": ["coded_account", "meals_100"]}},
+  {"id": "IRS-ent", "layer": "irs", "text": "Entertainment is not deductible.",
+   "when": {"eq": ["expense_kind", "entertainment"]}, "require": {"eq": ["coded_account", "entertainment_0"]}},
+  {"id": "IRS-travel", "layer": "irs", "text": "Rideshare, airfare and hotels are travel.",
+   "when": {"in": ["expense_kind", ["rideshare", "airfare", "hotel"]]}, "require": {"eq": ["coded_account", "travel"]}},
+  {"id": "IRS-office", "layer": "irs", "text": "Software and equipment are office expenses.",
+   "when": {"in": ["expense_kind", ["software", "equipment"]]}, "require": {"eq": ["coded_account", "office"]}},
+  {"id": "IRS-other", "layer": "irs", "text": "Anything else is coded other.",
+   "when": {"eq": ["expense_kind", "other"]}, "require": {"eq": ["coded_account", "other"]}},
+  {"id": "IRS-receipt-60", "layer": "irs", "text": "Receipts must be substantiated within 60 days of the expense.",
+   "when": {"gt": ["days_since_purchase", 60]}, "require": "receipt_attached"}
+]

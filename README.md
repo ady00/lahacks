@@ -192,3 +192,18 @@ All 15 tests verify:
 - QuickBooks double-entry balance and class tagging
 - Anti-split evasion subset-sum detection
 
+
+## Proof of Purchase API
+
+A FastAPI server that checks a purchase request against company and IRS rules with Z3, returns the verdict with the exact rules it breaks, the cheapest fix and a proof hash, and issues a mock card authorization once the case is compliant. Every route currently answers with sample JSON and an `X-Stub: 1` header until its real implementation lands.
+
+Run it:
+
+```bash
+python -m venv .venv && source .venv/bin/activate && pip install -e . && uvicorn api.main:app --reload --port 8000
+```
+
+Contract for every route and shape: [API_CONTRACT.md](API_CONTRACT.md). Interactive docs at `http://localhost:8000/docs`.
+
+### Changes to Intuit's data
+

@@ -1,0 +1,6 @@
+[
+  {"id": "3.4", "layer": "company", "text": "Any expense over $35 needs manager pre-approval.",
+   "when": {"gt": ["amount", 35]}, "require": "pre_approved"},
+  {"id": "5.2", "layer": "company", "text": "Interns get no transport reimbursement except at company events.",
+   "when": {"and": [{"eq": ["role", "intern"]}, {"in": ["expense_kind", ["rideshare", "airfare"]]}]}, "require": "at_company_event"}
+]
