@@ -126,3 +126,38 @@ def test_reload_then_audit_is_incremental(client, tmp_path, monkeypatch):
     client.post("/data/reload")
     assert conn.execute("select count(*) from verdicts where txn_id='t1'").fetchone()[0] == 0
     assert client.post("/ledger/audit", json={"company": "demo"}).json()["by_verdict"]["violation"] == 2   # 95 > 35, no pre-approval
+
+
+def test_reload_during_audits_leaves_no_stale_verdicts(tmp_path):
+    """Threads (reload with changed amounts vs audits) in a subprocess: Z3 from threads must not touch the pytest process."""
+    import subprocess, sys, textwrap
+    code = textwrap.dedent('''
+        import os, sys, threading, json, time
+        d = sys.argv[1]; os.environ["POP_DB"] = d + "/t.db"; os.environ["POP_DATA_DIR"] = d
+        from fastapi.testclient import TestClient
+        from api.main import app
+        from api import db, cases
+        H = "txn_id,company,employee_id,vendor,memo,amount,timestamp,qb_category,receipt_attached,receipt_date,source\\n"
+        def write(a):
+            open(d + "/transactions.csv", "w").write(H + "".join(
+                f"t{i},demo,e_newhire,Uber,UBER,{a},2026-09-30T08:10:00-07:00,Travel,1,2026-10-01,intuit\\n" for i in range(400)))
+        cases.extract = lambda text: {}
+        write(20)
+        with TestClient(app) as c:
+            c.post("/data/reload")
+            def audits():
+                for _ in range(4): assert c.post("/ledger/audit", json={"company": "demo"}).status_code == 200
+            def reloads():
+                for a in (95, 20, 95):
+                    write(a); assert c.post("/data/reload").status_code == 200; time.sleep(0.05)
+            ts = [threading.Thread(target=audits) for _ in range(3)] + [threading.Thread(target=reloads)]
+            [t.start() for t in ts]; [t.join() for t in ts]
+            c.post("/ledger/audit", json={"company": "demo"})
+        conn = db.connect()
+        rows = {r["txn_id"]: r["amount"] for r in db.list_transactions(conn, limit=1000)}
+        bad = [t for t, cj in conn.execute("select txn_id, case_json from verdicts")
+               if json.loads(cj)["facts"]["amount"]["value"] != rows[t]]
+        assert not bad, len(bad)
+    ''')
+    r = subprocess.run([sys.executable, "-c", code, str(tmp_path)], capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stderr[-2000:]

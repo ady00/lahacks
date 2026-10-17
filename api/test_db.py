@@ -181,3 +181,16 @@ def test_reviewer_approvals_reloaded_twice_no_duplicates_and_approve_rows_surviv
     for _ in range(2):
         assert db.load_data_dir(conn, tmp_path)["approvals"] == 1
     assert [tuple(r) for r in conn.execute("select case_id, txn_id from approvals order by id")] == [("c_1", "t9"), (None, "t1")]
+
+
+def test_receipt_flag_variants_and_bom(tmp_path):
+    H = "txn_id,company,employee_id,vendor,memo,amount,timestamp,qb_category,receipt_attached,receipt_date,source\n"
+    flags = {"a": "TRUE", "b": "1.0", "c": "yes", "d": "0", "e": "No", "f": "", "g": "maybe"}
+    (tmp_path / "transactions.csv").write_text(
+        "﻿" + H + "".join(f"{k},demo,,V,M,5,2026-09-30,Travel,{v},,intuit\n" for k, v in flags.items()), encoding="utf-8")
+    (tmp_path / "employees.csv").write_text("﻿employee_id,name,role,manager_id\nz1,Zed,intern,\n", encoding="utf-8")
+    conn = db.connect(tmp_path / "t.db")
+    r = db.load_data_dir(conn, tmp_path)
+    assert r["skipped"] == [] and r["transactions"] == 7 and r["employees"] == 1
+    got = {x["txn_id"]: x["receipt_attached"] for x in db.list_transactions(conn)}
+    assert got == {"a": 1, "b": 1, "c": 1, "d": 0, "e": 0, "f": None, "g": None}

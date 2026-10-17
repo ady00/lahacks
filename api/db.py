@@ -144,7 +144,7 @@ def record_policy(conn, version, rules):
 
 # ---- Person B's data files ----
 def _csv(path: Path):
-    with open(path, newline="", encoding="utf-8") as f:
+    with open(path, newline="", encoding="utf-8-sig") as f:
         yield from csv.DictReader(f)
 
 
@@ -164,7 +164,7 @@ def load_data_dir(conn, data_dir=None) -> dict:
         out["approvals"] = len(apps)
     ext = {}
     if (p := d / "extractions.jsonl").exists():
-        for line in p.read_text(encoding="utf-8").splitlines():
+        for line in p.read_text(encoding="utf-8-sig").splitlines():
             try:
                 o = json.loads(line)
                 ext[o["txn_id"]] = json.dumps(o["facts"], sort_keys=True)
@@ -201,8 +201,8 @@ def load_data_dir(conn, data_dir=None) -> dict:
                 out["skipped"].append({"txn_id": tid, "reason": reason})
                 continue
             r["amount"] = amount
-            ra = (r.get("receipt_attached") or "").strip()
-            r["receipt_attached"] = int(ra) if ra else None  # blank = unknown, never 0
+            ra = (r.get("receipt_attached") or "").strip().lower()  # blank or unrecognized = unknown, never 0
+            r["receipt_attached"] = 1 if ra in ("1", "1.0", "true", "yes") else 0 if ra in ("0", "0.0", "false", "no") else None
             r["employee_id"] = r.get("employee_id") or None
             rows.append(r)
     for r in rows:  # no extraction in the file this time: keep the stored one so a reload doesn't churn verdicts
