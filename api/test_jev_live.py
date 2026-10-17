@@ -52,3 +52,36 @@ def test_bad_shape(monkeypatch):
 def test_live():
     out = jev_live.extract("Client dinner with Acme's CFO, about $48")
     assert out["expense_kind"]["value"] == "meal" and out["client_present"]["p"] > 0.5
+
+
+def test_reviewer_key_read_at_call_time_and_never_in_error(monkeypatch):
+    seen = {}
+
+    def boom(*a, **k):
+        seen.update(k)
+        raise httpx.ConnectError("down", request=httpx.Request("POST", jev_live.URL))
+    monkeypatch.setattr(httpx, "post", boom)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "sk-reviewer-secret-123")
+    with pytest.raises(jev_live.JevError) as e:
+        jev_live.extract("x")
+    assert "sk-reviewer" not in str(e.value) and e.value.__cause__ is None
+    assert seen["timeout"] == 10.0 and seen["headers"]["Authorization"] == "Bearer sk-reviewer-secret-123"
+
+
+def test_reviewer_non_json_200(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(200, text="<html>", request=httpx.Request("POST", "http://x")))
+    with pytest.raises(jev_live.JevError):
+        jev_live.extract("x")
+
+
+def test_reviewer_try_text_local_json_unicode_and_jev_failure(monkeypatch, capsys):
+    import json
+    from api import try_text
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    assert try_text.main(["Déjeuner client ☕ 東京, $42", "--local", "--json", "--env", "/dev/null"]) == 0
+    r = json.loads(capsys.readouterr().out)
+    assert r["facts"]["amount"]["value"] == 42.0 and r["verdict"] == "violation"
+    assert try_text.main(["x", "--env", "/dev/null"]) == 1
+    err = capsys.readouterr().err
+    assert err.count("\n") == 1 and "TYPESAFE_API_KEY not set" in err
