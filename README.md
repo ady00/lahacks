@@ -207,3 +207,7 @@ Contract for every route and shape: [API_CONTRACT.md](API_CONTRACT.md). Interact
 
 ### Changes to Intuit's data
 
+
+### Known limit
+
+`days_since_purchase` for a ledger row with a receipt is `receipt_date - timestamp`, so a receipt filed on day 75 satisfies IRS-receipt-60. The rules catch a receipt that is *missing* after the deadline, not one that arrived late.

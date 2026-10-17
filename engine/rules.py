@@ -1,6 +1,8 @@
 import hashlib
 import json
+import math
 import operator
+import os
 import threading
 from pathlib import Path
 from typing import Literal, NamedTuple
@@ -45,6 +47,41 @@ class Verdict(NamedTuple):
     status: Literal["compliant", "violation", "undetermined"]
     violations: list[Violation]
     applied: list[str]
+
+
+class FixStep(NamedTuple):
+    fact: str
+    from_: object
+    to: object
+
+
+class Decision(NamedTuple):
+    facts: dict
+    derived: dict[str, str]
+    verdict: Verdict
+    fix: list[FixStep] | None  # [] when nothing to fix, None = no change you control makes this compliant
+    questions: list[str]
+
+
+def _p(entry) -> float | None:
+    p = entry.get("p") if isinstance(entry, dict) else None
+    return float(p) if isinstance(p, (int, float)) and not isinstance(p, bool) and math.isfinite(p) else None
+
+
+def facts_from_probs(probs: dict[str, dict], hi: float | None = None, lo: float | None = None) -> dict[str, object]:
+    """Jev's per-fact probabilities -> the facts known with confidence. Pure Python, no Z3."""
+    hi = float(os.environ.get("POP_P_HI", 0.85)) if hi is None else hi
+    lo = float(os.environ.get("POP_P_LO", 0.15)) if lo is None else lo
+    facts = {}
+    for name, entry in probs.items():
+        spec, p = FACTS.get(name), _p(entry)
+        if spec is None or p is None:
+            continue
+        if spec.kind == "enum" and entry.get("value") in spec.values and p >= hi:
+            facts[name] = entry["value"]
+        elif spec.kind == "bool" and (p >= hi or p <= lo):
+            facts[name] = p >= hi
+    return facts
 
 
 def _sat(*constraints) -> bool:
@@ -101,6 +138,20 @@ def compile_expr(expr, vars: dict[str, z3.ExprRef]) -> z3.ExprRef:
     return _CMP[op](v, to_z3(name, lit))
 
 
+def _names(expr) -> set[str]:
+    """Fact names an expression mentions, from its raw JSON."""
+    if isinstance(expr, bool):
+        return set()
+    if isinstance(expr, str):
+        return {expr}
+    (op, arg), = expr.items()
+    if op in ("and", "or"):
+        return set().union(*map(_names, arg))
+    if op == "not":
+        return _names(arg)
+    return {arg[0]}
+
+
 class Policy:
     # Every public method is `return _locked(self._name, ...)`; the private _name does all Z3 work.
     # Public return values are plain Python (facts_eq is the documented exception).
@@ -128,6 +179,9 @@ class Policy:
             when, require = compile_expr(r["when"], self.vars), compile_expr(r["require"], self.vars)
             self.rules.append(Rule(r["id"], r["layer"], r["text"], when, require, z3.Implies(when, require), r))
         self.by_id = {r.id: r for r in self.rules}
+        self.when_names = [_names(r["when"]) for r in rules]
+        self.formula_names = [w | _names(r["require"]) for w, r in zip(self.when_names, rules)]
+        self.track = {n: z3.Bool(f"fact_{n}") for n in FACTS}
         self.all_formulas = z3.And(*[r.formula for r in self.rules])
         self.version = hashlib.sha256(json.dumps(rules, sort_keys=True).encode()).hexdigest()[:12]
 
@@ -143,29 +197,167 @@ class Policy:
 
     def _check(self, facts: dict[str, object]) -> Verdict:
         eqs = self._facts_eq(facts)
+        s = z3.Solver()
+        s.add(*self.dom, *eqs.values())
+        # One model fixing the known facts: a rule whose facts are all known is decided by eval, no solver.
         # Joint check first: sat means no rule is violated on its own, so the per-rule loop is skipped.
-        if not _sat(*self.dom, *eqs.values(), self.all_formulas):
+        joint = s.check(self.all_formulas) == z3.sat
+        m = s.model() if joint or s.check() == z3.sat else None  # None: a known fact is outside its domain
+        if not joint:
             violations = []
-            for r in self.rules:
-                s = z3.Solver()
-                s.set(unsat_core=True)
-                s.set("core.minimize", True)
-                s.add(*self.dom, r.formula)
+            for r, names in zip(self.rules, self.formula_names):
+                if m is not None and names <= facts.keys():
+                    holds = z3.is_true(m.eval(r.formula, model_completion=True))
+                else:
+                    holds = s.check(r.formula) == z3.sat
+                if holds:
+                    continue
+                # fails: only now pay for the minimized core (fresh solver, so cores match the per-rule spec)
+                c = z3.Solver()
+                c.set(unsat_core=True)
+                c.set("core.minimize", True)
+                c.add(*self.dom, r.formula)
                 for n, eq in eqs.items():
-                    s.assert_and_track(eq, z3.Bool(f"fact_{n}"))
-                if s.check() == z3.unsat:
-                    violations.append(Violation(r.id, sorted(str(b).removeprefix("fact_") for b in s.unsat_core())))
+                    c.assert_and_track(eq, self.track[n])
+                c.check()
+                violations.append(Violation(r.id, sorted(str(b).removeprefix("fact_") for b in c.unsat_core())))
             if violations:
                 return Verdict("violation", violations, [])
-        if _sat(*self.dom, *eqs.values(), z3.Not(self.all_formulas)):
+        if s.check(z3.Not(self.all_formulas)) == z3.sat:
             return Verdict("undetermined", [], [])
-        sub = [(self.vars[n], to_z3(n, v)) for n, v in facts.items()]
         applied = []
-        for r in self.rules:
-            w = z3.simplify(z3.substitute(r.when, *sub)) if sub else z3.simplify(r.when)
-            if z3.is_true(w) or (not z3.is_false(w) and not _sat(*self.dom, *eqs.values(), z3.Not(r.when))):
+        for r, names in zip(self.rules, self.when_names):
+            if (z3.is_true(m.eval(r.when, model_completion=True)) if m is not None and names <= facts.keys()
+                    else s.check(z3.Not(r.when)) == z3.unsat):
                 applied.append(r.id)
         return Verdict("compliant", [], applied)
+
+    def required_values(self, facts: dict, fact: str) -> list[str]:
+        return _locked(self._required_values, facts, fact)
+
+    def _required_values(self, facts: dict, fact: str) -> list[str]:
+        # only rules mentioning the fact, so a violation elsewhere can't hide the required value
+        s = z3.Solver()
+        s.add(*self.dom, *[r.formula for r in self.rules if fact in json.dumps(r.raw)], *self._facts_eq(facts).values())
+        out = []
+        for i, v in enumerate(FACTS[fact].values):
+            s.push()
+            s.add(self.vars[fact] == i)
+            if s.check() == z3.sat:
+                out.append(v)
+            s.pop()
+        return out
+
+    def resolve(self, facts: dict) -> tuple[dict, dict[str, str]]:
+        return _locked(self._resolve, facts)
+
+    def _resolve(self, facts: dict) -> tuple[dict, dict[str, str]]:
+        out, derived = dict(facts), {}
+        eqs = list(self._facts_eq(facts).values())
+        for name, spec in FACTS.items():
+            if not spec.derived or name in facts:
+                continue
+            vals = self._required_values(facts, name)
+            if len(vals) != 1:
+                continue
+            out[name] = vals[0]
+            for r in self.rules:
+                if name in json.dumps(r.raw) and not _sat(*self.dom, *eqs, z3.Not(r.when)):
+                    derived[name] = r.id
+                    break
+        return out, derived
+
+    def questions(self, facts: dict, probs: dict[str, dict]) -> list[str]:
+        return _locked(self._questions, facts, probs)
+
+    def _questions(self, facts: dict, probs: dict[str, dict]) -> list[str]:
+        def outcome(f):
+            rf, _ = self._resolve(f)
+            v = self._check(rf)
+            return v.status, {x.rule for x in v.violations}, {n: rf.get(n) for n, s in FACTS.items() if s.derived}
+
+        asked = [n for n, s in FACTS.items() if s.kind == "bool" and n not in facts
+                 and outcome({**facts, n: True}) != outcome({**facts, n: False})]
+        # stable sort: ties keep schema order
+        def doubt(n):
+            p = _p(probs.get(n))
+            return abs((0.5 if p is None else p) - 0.5)
+        return sorted(asked, key=doubt)
+
+    def fix(self, facts: dict) -> list[FixStep] | None:
+        return _locked(self._fix, facts)
+
+    def _fix(self, facts: dict) -> list[FixStep] | None:
+        eqs = self._facts_eq(facts)
+        hard = [*self.dom, *[r.formula for r in self.rules]] + [eqs[n] for n in facts if not FACTS[n].mutable]
+        mutable = [n for n in FACTS if n in facts and FACTS[n].mutable]  # unknown facts stay free
+        o = z3.Optimize()
+        o.add(*hard)
+        for n in mutable:
+            o.add_soft(eqs[n], weight=FACTS[n].weight)
+        if o.check() != z3.sat:
+            return None
+        m = o.model()
+        new = {n: from_z3(n, m.eval(self.vars[n], model_completion=True)) for n in mutable}
+        changed = sorted((n for n in mutable if new[n] != facts[n]), key=lambda n: -FACTS[n].weight)  # stable: schema order
+        if "amount" in changed:
+            # whole cents close an open bound: `amount < 75` gives 74.99, not Z3's "75 - epsilon"
+            o2 = z3.Optimize()
+            cents = z3.Int("cents")
+            o2.add(*hard, *[self.vars[n] == to_z3(n, new[n]) for n in mutable if n != "amount"],
+                   self.vars["amount"] <= to_z3("amount", facts["amount"]), self.vars["amount"] * 100 == cents)
+            o2.maximize(cents)
+            if o2.check() == z3.sat:
+                new["amount"] = o2.model()[cents].as_long() / 100
+        return [FixStep(n, facts[n], new[n]) for n in changed]
+
+    def decide(self, facts: dict, probs: dict[str, dict]) -> Decision:
+        return _locked(self._decide, facts, probs)
+
+    def _decide(self, facts: dict, probs: dict[str, dict]) -> Decision:
+        rf, derived = self._resolve(facts)
+        verdict = self._check(rf)
+        fix = self._fix(rf) if verdict.status == "violation" else []
+        questions = self._questions(rf, probs) if verdict.status == "undetermined" else []
+        return Decision(rf, derived, verdict, fix, questions)
+
+    def facts_from_model(self, model: z3.ModelRef) -> dict[str, object]:
+        """Every fact's value in a Z3 model. Takes a Z3 model: callers must hold ENGINE_LOCK."""
+        return _locked(self._facts_from_model, model)
+
+    def _facts_from_model(self, model: z3.ModelRef) -> dict[str, object]:
+        return {n: from_z3(n, model.eval(v, model_completion=True)) for n, v in self.vars.items()}
+
+    def audit(self) -> dict:
+        return _locked(self._audit)
+
+    def _audit(self) -> dict:
+        s = z3.Solver()
+        s.add(*self.dom)
+        dead = [r.id for r in self.rules if not _sat(*self.dom, r.when)]
+        live = [r for r in self.rules if r.id not in dead]
+        conflicts = []
+        # ponytail: O(n^2) pairs with push/pop on one solver; ~300 pairs for the shipped packs
+        for i, a in enumerate(live):
+            for b in live[i + 1:]:
+                s.push()
+                s.add(a.when, b.when)
+                if s.check() == z3.sat:
+                    model = s.model()
+                    # a prohibition (require false) is never "in conflict" with a rule it already rules out
+                    if s.check(a.require) == z3.sat and s.check(b.require) == z3.sat and s.check(a.require, b.require) == z3.unsat:
+                        conflicts.append({"a": a.id, "b": b.id, "example": self._facts_from_model(model)})
+                s.pop()
+        return {"dead": dead, "conflicts": conflicts}
+
+    def disagreement(self, rule_a: dict, rule_b: dict) -> dict | None:
+        return _locked(self._disagreement, rule_a, rule_b)
+
+    def _disagreement(self, rule_a: dict, rule_b: dict) -> dict | None:
+        fa, fb = (z3.Implies(compile_expr(r["when"], self.vars), compile_expr(r["require"], self.vars)) for r in (rule_a, rule_b))
+        s = z3.Solver()
+        s.add(*self.dom, fa != fb)
+        return self._facts_from_model(s.model()) if s.check() == z3.sat else None
 
 
 def load_policy(*paths: str | Path) -> Policy:
