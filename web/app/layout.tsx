@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
-import { get } from "@/lib/api";
+import { API_URL, get } from "@/lib/api";
 import type { Health } from "@/lib/types";
 import "./globals.css";
 
@@ -23,10 +23,11 @@ const NAV = [
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   let stub = false;
+  let down = false;
   try {
     stub = (await get<Health>("/health")).stub;
   } catch {
-    // API down: the shell still renders; the page's own fetch reports the error.
+    down = true; // server-rendered, so the message survives production (error.tsx only gets a digest there)
   }
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
@@ -45,6 +46,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             ))}
           </nav>
         </header>
+        {down && (
+          <p className="bg-red-100 px-6 py-2 text-center text-sm text-red-800">{`API unreachable at ${API_URL}`}</p>
+        )}
         <main className="mx-auto w-full max-w-5xl p-6">{children}</main>
       </body>
     </html>

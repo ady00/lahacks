@@ -2,13 +2,16 @@
 
 import { useEffect } from "react";
 
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+// In production Next replaces a server error's message with a digest, so the banner in layout.tsx
+// (server-rendered) is what names the unreachable API; this page only offers the retry.
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => console.error(error), [error]);
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold">Something broke</h1>
-      <p className="font-mono text-sm text-red-700 dark:text-red-400">{error.message}</p>
-      <button onClick={reset} className="rounded border px-3 py-1 text-sm">
+      <p className="text-sm">The API returned an error or is unreachable. See the banner above, or the server log.</p>
+      {error.digest && <p className="font-mono text-xs text-zinc-500">{error.digest}</p>}
+      <button onClick={() => retry()} className="rounded border px-3 py-1 text-sm">
         Retry
       </button>
     </div>
