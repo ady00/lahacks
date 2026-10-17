@@ -211,3 +211,17 @@ Contract for every route and shape: [API_CONTRACT.md](API_CONTRACT.md). Interact
 ### Known limit
 
 `days_since_purchase` for a ledger row with a receipt is `receipt_date - timestamp`, so a receipt filed on day 75 satisfies IRS-receipt-60. The rules catch a receipt that is *missing* after the deadline, not one that arrived late.
+
+## Dashboard
+
+Next.js app in `web/` (Person C). Every page fetches the API server-side on each request.
+
+```bash
+cd web && pnpm install && pnpm dev     # http://localhost:3000, needs the API on http://localhost:8000
+```
+
+One environment variable, `API_URL` (`web/.env.local` locally; `http://localhost:8000` by default). Types come from the API's own schema; regenerate after a shape change:
+
+```bash
+cd web && pnpm dlx openapi-typescript http://localhost:8000/openapi.json -o lib/openapi.d.ts
+```
