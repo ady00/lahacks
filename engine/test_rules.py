@@ -115,7 +115,8 @@ def test_check_order_unknown_fact_and_applied_via_solver():
     assert P.check({}).status == "undetermined"
     with pytest.raises(KeyError): P.check({"colour": "red"})
     # amount unknown, pre_approved settles 3.4 anyway: compliant, and the solver says 3.4 need not apply
-    v = P.check({**{k: x for k, x in DINNER.items() if k != "amount"}, "pre_approved": True, "coded_account": "meals_50"})
+    # (receipt_attached too: with the full pack an unknown amount could be over 3.5's $500)
+    v = P.check({**{k: x for k, x in DINNER.items() if k != "amount"}, "pre_approved": True, "receipt_attached": True, "coded_account": "meals_50"})
     assert v.status == "compliant" and "3.4" not in v.applied and "IRS-meal" in v.applied
     # hour unknown but its domain forces the condition: applied through the solver
     p = Policy([{"id": "h", "layer": "company", "text": "t", "when": {"ge": ["hour", 0]}, "require": True}])

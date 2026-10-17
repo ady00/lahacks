@@ -293,6 +293,44 @@ class Policy:
         questions = self._questions(rf, probs) if verdict.status == "undetermined" else []
         return Decision(rf, derived, verdict, fix, questions)
 
+    def facts_from_model(self, model: z3.ModelRef) -> dict[str, object]:
+        """Every fact's value in a Z3 model. Takes a Z3 model: callers must hold ENGINE_LOCK."""
+        return _locked(self._facts_from_model, model)
+
+    def _facts_from_model(self, model: z3.ModelRef) -> dict[str, object]:
+        return {n: from_z3(n, model.eval(v, model_completion=True)) for n, v in self.vars.items()}
+
+    def audit(self) -> dict:
+        return _locked(self._audit)
+
+    def _audit(self) -> dict:
+        s = z3.Solver()
+        s.add(*self.dom)
+        dead = [r.id for r in self.rules if not _sat(*self.dom, r.when)]
+        live = [r for r in self.rules if r.id not in dead]
+        conflicts = []
+        # ponytail: O(n^2) pairs with push/pop on one solver; ~300 pairs for the shipped packs
+        for i, a in enumerate(live):
+            for b in live[i + 1:]:
+                s.push()
+                s.add(a.when, b.when)
+                if s.check() == z3.sat:
+                    model = s.model()
+                    # a prohibition (require false) is never "in conflict" with a rule it already rules out
+                    if s.check(a.require) == z3.sat and s.check(b.require) == z3.sat and s.check(a.require, b.require) == z3.unsat:
+                        conflicts.append({"a": a.id, "b": b.id, "example": self._facts_from_model(model)})
+                s.pop()
+        return {"dead": dead, "conflicts": conflicts}
+
+    def disagreement(self, rule_a: dict, rule_b: dict) -> dict | None:
+        return _locked(self._disagreement, rule_a, rule_b)
+
+    def _disagreement(self, rule_a: dict, rule_b: dict) -> dict | None:
+        fa, fb = (z3.Implies(compile_expr(r["when"], self.vars), compile_expr(r["require"], self.vars)) for r in (rule_a, rule_b))
+        s = z3.Solver()
+        s.add(*self.dom, fa != fb)
+        return self._facts_from_model(s.model()) if s.check() == z3.sat else None
+
 
 def load_policy(*paths: str | Path) -> Policy:
     rules = []
