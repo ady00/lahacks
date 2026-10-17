@@ -1,0 +1,53 @@
+[
+  {
+    "id": "TX-101-MEAL-PASS",
+    "amount": 82.50,
+    "currency": "USD",
+    "category": "meals_entertainment",
+    "vendor": "Chipotle Executive Catering",
+    "description": "Lunch meeting with product design team",
+    "department": "Engineering",
+    "attendee_count": 2,
+    "has_receipt": true,
+    "approved_by_manager": true,
+    "approved_by_vp": false
+  },
+  {
+    "id": "TX-102-MEAL-FAIL",
+    "amount": 140.00,
+    "currency": "USD",
+    "category": "meals_entertainment",
+    "vendor": "Nobu Downtown",
+    "description": "Client dinner",
+    "department": "Sales",
+    "attendee_count": 1,
+    "has_receipt": false,
+    "approved_by_manager": false,
+    "approved_by_vp": false
+  },
+  {
+    "id": "TX-201-SAAS-PASS",
+    "amount": 750.00,
+    "currency": "USD",
+    "category": "software_saas",
+    "vendor": "Datadog",
+    "description": "Infrastructure monitoring subscription",
+    "department": "Engineering",
+    "has_receipt": true,
+    "approved_by_manager": true,
+    "approved_by_vp": true
+  },
+  {
+    "id": "TX-202-SAAS-FAIL",
+    "amount": 900.00,
+    "currency": "USD",
+    "category": "software_saas",
+    "vendor": "Figma",
+    "description": "Organization enterprise license",
+    "department": "Engineering",
+    "has_receipt": true,
+    "approved_by_manager": true,
+    "approved_by_vp": false
+  }
+]
+

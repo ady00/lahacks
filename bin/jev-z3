@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_EXEC="$SCRIPT_DIR/.venv/bin/python"
+if [ ! -f "$PYTHON_EXEC" ]; then
+    PYTHON_EXEC="python3"
+fi
+PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH" exec "$PYTHON_EXEC" -m jev_z3.cli "$@"
+

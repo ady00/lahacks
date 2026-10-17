@@ -1,0 +1,31 @@
+[
+  {
+    "id": "RULE-MEALS-01",
+    "rule_text": "Meals and entertainment expenses over $75 require an itemized receipt and manager approval."
+  },
+  {
+    "id": "RULE-SAAS-01",
+    "rule_text": "Software and SaaS subscriptions exceeding $500 per month must be billed to Engineering and approved by a VP."
+  },
+  {
+    "id": "RULE-ATTENDEE-01",
+    "rule_text": "Meals and dining exceeding $60 per attendee require an itemized attendees list."
+  },
+  {
+    "id": "RULE-PROCUR-01",
+    "rule_text": "Contractor and consultant payments above $10,000 require purchase order matching and an active W-9 tax form."
+  },
+  {
+    "id": "RULE-TRAVEL-RANGE",
+    "rule_text": "Travel and hotel expenses between $150 and $400 require manager approval."
+  },
+  {
+    "id": "RULE-QB-UBER",
+    "rule_text": "QuickBooks rule: Categorize all Uber and Lyft rides under $100 to Account 6200 and Class Sales."
+  },
+  {
+    "id": "RULE-ANTI-SPLIT",
+    "rule_text": "No employee may split transactions totaling over $1,000 to the same merchant within 24 hours to evade approval."
+  }
+]
+
