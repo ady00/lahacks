@@ -10,3 +10,11 @@ def client(tmp_path, monkeypatch):
     from api.main import app
     with TestClient(app) as c:   # the context manager is what runs startup; a bare TestClient(app) never does
         yield c
+
+
+@pytest.fixture(autouse=True)
+def fake_extractor(monkeypatch):
+    # the demo dinner's Jev output; no test ever calls a live model
+    from api import cases
+    monkeypatch.setattr(cases, "extract", lambda text: {"expense_kind": {"value": "meal", "p": 0.97},
+        "client_present": {"p": 0.91}, "at_company_event": {"p": 0.08}})
