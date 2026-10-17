@@ -138,6 +138,20 @@ def compile_expr(expr, vars: dict[str, z3.ExprRef]) -> z3.ExprRef:
     return _CMP[op](v, to_z3(name, lit))
 
 
+def _names(expr) -> set[str]:
+    """Fact names an expression mentions, from its raw JSON."""
+    if isinstance(expr, bool):
+        return set()
+    if isinstance(expr, str):
+        return {expr}
+    (op, arg), = expr.items()
+    if op in ("and", "or"):
+        return set().union(*map(_names, arg))
+    if op == "not":
+        return _names(arg)
+    return {arg[0]}
+
+
 class Policy:
     # Every public method is `return _locked(self._name, ...)`; the private _name does all Z3 work.
     # Public return values are plain Python (facts_eq is the documented exception).
@@ -165,6 +179,9 @@ class Policy:
             when, require = compile_expr(r["when"], self.vars), compile_expr(r["require"], self.vars)
             self.rules.append(Rule(r["id"], r["layer"], r["text"], when, require, z3.Implies(when, require), r))
         self.by_id = {r.id: r for r in self.rules}
+        self.when_names = [_names(r["when"]) for r in rules]
+        self.formula_names = [w | _names(r["require"]) for w, r in zip(self.when_names, rules)]
+        self.track = {n: z3.Bool(f"fact_{n}") for n in FACTS}
         self.all_formulas = z3.And(*[r.formula for r in self.rules])
         self.version = hashlib.sha256(json.dumps(rules, sort_keys=True).encode()).hexdigest()[:12]
 
@@ -180,27 +197,38 @@ class Policy:
 
     def _check(self, facts: dict[str, object]) -> Verdict:
         eqs = self._facts_eq(facts)
+        s = z3.Solver()
+        s.add(*self.dom, *eqs.values())
+        # One model fixing the known facts: a rule whose facts are all known is decided by eval, no solver.
         # Joint check first: sat means no rule is violated on its own, so the per-rule loop is skipped.
-        if not _sat(*self.dom, *eqs.values(), self.all_formulas):
+        joint = s.check(self.all_formulas) == z3.sat
+        m = s.model() if joint or s.check() == z3.sat else None  # None: a known fact is outside its domain
+        if not joint:
             violations = []
-            for r in self.rules:
-                s = z3.Solver()
-                s.set(unsat_core=True)
-                s.set("core.minimize", True)
-                s.add(*self.dom, r.formula)
+            for r, names in zip(self.rules, self.formula_names):
+                if m is not None and names <= facts.keys():
+                    holds = z3.is_true(m.eval(r.formula, model_completion=True))
+                else:
+                    holds = s.check(r.formula) == z3.sat
+                if holds:
+                    continue
+                # fails: only now pay for the minimized core (fresh solver, so cores match the per-rule spec)
+                c = z3.Solver()
+                c.set(unsat_core=True)
+                c.set("core.minimize", True)
+                c.add(*self.dom, r.formula)
                 for n, eq in eqs.items():
-                    s.assert_and_track(eq, z3.Bool(f"fact_{n}"))
-                if s.check() == z3.unsat:
-                    violations.append(Violation(r.id, sorted(str(b).removeprefix("fact_") for b in s.unsat_core())))
+                    c.assert_and_track(eq, self.track[n])
+                c.check()
+                violations.append(Violation(r.id, sorted(str(b).removeprefix("fact_") for b in c.unsat_core())))
             if violations:
                 return Verdict("violation", violations, [])
-        if _sat(*self.dom, *eqs.values(), z3.Not(self.all_formulas)):
+        if s.check(z3.Not(self.all_formulas)) == z3.sat:
             return Verdict("undetermined", [], [])
-        sub = [(self.vars[n], to_z3(n, v)) for n, v in facts.items()]
         applied = []
-        for r in self.rules:
-            w = z3.simplify(z3.substitute(r.when, *sub)) if sub else z3.simplify(r.when)
-            if z3.is_true(w) or (not z3.is_false(w) and not _sat(*self.dom, *eqs.values(), z3.Not(r.when))):
+        for r, names in zip(self.rules, self.when_names):
+            if (z3.is_true(m.eval(r.when, model_completion=True)) if m is not None and names <= facts.keys()
+                    else s.check(z3.Not(r.when)) == z3.unsat):
                 applied.append(r.id)
         return Verdict("compliant", [], applied)
 

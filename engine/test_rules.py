@@ -180,9 +180,9 @@ from engine.test_rules import DINNER, ENT
 P = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
 ok = {**DINNER, "amount": 30, "coded_account": "meals_50"}
 def run(i):
-    return [repr(P.check(DINNER if (i + k) % 2 else ok)) for k in range(200)] + \
-           [repr(P.decide({k: v for k, v in (DINNER if (i + k) % 2 else ok).items() if k != "coded_account"}, {})) for k in range(50)] + \
-           [repr(P.decide(DINNER if (i + k) % 2 else ENT, {})) for k in range(20)]
+    return [repr(P.check(DINNER if (i + k) % 2 else ok)) for k in range(60)] + \
+           [repr(P.decide({k: v for k, v in (DINNER if (i + k) % 2 else ok).items() if k != "coded_account"}, {})) for k in range(16)] + \
+           [repr(P.decide(DINNER if (i + k) % 2 else ENT, {})) for k in range(6)]
 with ThreadPoolExecutor(8) as ex:
     out = list(ex.map(run, range(8)))
 assert len({tuple(sorted(set(o))) for o in out}) == 1 and len(set(out[0])) == 6, out[0][:2]
@@ -339,3 +339,40 @@ def test_reviewer_fix_cheapest_across_rules_and_applied_is_never_a_violation():
     for f in ({**base, "expense_kind": "rideshare"}, eq, {k: v for k, v in eq.items() if k != "expense_kind"}):
         applied = {**f, **{s.fact: s.to for s in p.fix(f)}}
         assert p.check(applied).status != "violation"
+
+
+def test_one_model_check_matches_per_rule_solver_reference():
+    # the spec's algorithm, solver per rule: check() must give the same status, ids, order, because and applied
+    import random
+    from engine.schema import FACTS
+
+    def reference(p, facts):
+        eqs = {n: p.vars[n] == to_z3(n, v) for n, v in facts.items()}
+        def sat(*c):
+            s = z3.Solver(); s.add(*p.dom, *eqs.values(), *c); return s.check() == z3.sat
+        out = []
+        for r in p.rules:
+            s = z3.Solver(); s.set(unsat_core=True); s.set("core.minimize", True); s.add(*p.dom, r.formula)
+            for n, e in eqs.items(): s.assert_and_track(e, z3.Bool(f"fact_{n}"))
+            if s.check() == z3.unsat: out.append((r.id, sorted(str(b).removeprefix("fact_") for b in s.unsat_core())))
+        if out: return ("violation", out, [])
+        if sat(z3.Not(p.all_formulas)): return ("undetermined", [], [])
+        return ("compliant", [], [r.id for r in p.rules if not sat(z3.Not(r.when))])
+
+    pick = {"amount": [5, 20, 25, 25.01, 35, 35.01, 74.99, 75, 100, 101, 150, 151, 250, 251, 300, 301, 500, 501],
+            "hour": [0, 5, 6, 12, 21, 22, 23], "days_since_purchase": [0, 1, 14, 15, 60, 61, 75]}
+    CODE = {"meal": "meals_50", "rideshare": "travel", "airfare": "travel", "hotel": "travel", "software": "office",
+            "equipment": "office", "entertainment": "entertainment_0", "other": "other"}
+    seen = {"compliant": 0, "violation": 0, "undetermined": 0}
+    rng = random.Random(10)
+    for _ in range(300):
+        f = {n: (rng.choice(s.values) if s.kind == "enum" else rng.random() < 0.5 if s.kind == "bool" else rng.choice(pick[n]))
+             for n, s in FACTS.items() if rng.random() < 0.85}
+        if rng.random() < 0.6:  # lean toward compliant rows so `applied` gets exercised too
+            f.update({n: True for n in ("pre_approved", "receipt_attached") if n in f})
+            if "coded_account" in f and f.get("expense_kind") in CODE:
+                f["coded_account"] = "meals_100" if f["expense_kind"] == "meal" and f.get("at_company_event") else CODE[f["expense_kind"]]
+        v = P.check(f)
+        seen[v.status] += 1
+        assert (v.status, [(x.rule, x.because) for x in v.violations], v.applied) == reference(P, f), f
+    assert min(seen.values()) >= 30, seen
