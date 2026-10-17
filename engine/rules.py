@@ -49,11 +49,17 @@ class Verdict(NamedTuple):
     applied: list[str]
 
 
+class FixStep(NamedTuple):
+    fact: str
+    from_: object
+    to: object
+
+
 class Decision(NamedTuple):
     facts: dict
     derived: dict[str, str]
     verdict: Verdict
-    fix: list | None  # list[FixStep] once Task 5 lands; [] when nothing to fix, None = no controllable fix
+    fix: list[FixStep] | None  # [] when nothing to fix, None = no change you control makes this compliant
     questions: list[str]
 
 
@@ -250,13 +256,40 @@ class Policy:
             return abs((0.5 if p is None else p) - 0.5)
         return sorted(asked, key=doubt)
 
+    def fix(self, facts: dict) -> list[FixStep] | None:
+        return _locked(self._fix, facts)
+
+    def _fix(self, facts: dict) -> list[FixStep] | None:
+        eqs = self._facts_eq(facts)
+        hard = [*self.dom, *[r.formula for r in self.rules]] + [eqs[n] for n in facts if not FACTS[n].mutable]
+        mutable = [n for n in FACTS if n in facts and FACTS[n].mutable]  # unknown facts stay free
+        o = z3.Optimize()
+        o.add(*hard)
+        for n in mutable:
+            o.add_soft(eqs[n], weight=FACTS[n].weight)
+        if o.check() != z3.sat:
+            return None
+        m = o.model()
+        new = {n: from_z3(n, m.eval(self.vars[n], model_completion=True)) for n in mutable}
+        changed = sorted((n for n in mutable if new[n] != facts[n]), key=lambda n: -FACTS[n].weight)  # stable: schema order
+        if "amount" in changed:
+            # whole cents close an open bound: `amount < 75` gives 74.99, not Z3's "75 - epsilon"
+            o2 = z3.Optimize()
+            cents = z3.Int("cents")
+            o2.add(*hard, *[self.vars[n] == to_z3(n, new[n]) for n in mutable if n != "amount"],
+                   self.vars["amount"] <= to_z3("amount", facts["amount"]), self.vars["amount"] * 100 == cents)
+            o2.maximize(cents)
+            if o2.check() == z3.sat:
+                new["amount"] = o2.model()[cents].as_long() / 100
+        return [FixStep(n, facts[n], new[n]) for n in changed]
+
     def decide(self, facts: dict, probs: dict[str, dict]) -> Decision:
         return _locked(self._decide, facts, probs)
 
     def _decide(self, facts: dict, probs: dict[str, dict]) -> Decision:
         rf, derived = self._resolve(facts)
         verdict = self._check(rf)
-        fix = []  # Task 5: replace with self._fix(rf) when verdict.status == "violation"
+        fix = self._fix(rf) if verdict.status == "violation" else []
         questions = self._questions(rf, probs) if verdict.status == "undetermined" else []
         return Decision(rf, derived, verdict, fix, questions)
 

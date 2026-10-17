@@ -175,15 +175,16 @@ def test_concurrent_check_does_not_crash():
     code = """
 from concurrent.futures import ThreadPoolExecutor
 from engine.rules import load_policy
-from engine.test_rules import DINNER
+from engine.test_rules import DINNER, ENT
 P = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
 ok = {**DINNER, "amount": 30, "coded_account": "meals_50"}
 def run(i):
     return [repr(P.check(DINNER if (i + k) % 2 else ok)) for k in range(200)] + \
-           [repr(P.decide({k: v for k, v in (DINNER if (i + k) % 2 else ok).items() if k != "coded_account"}, {})) for k in range(50)]
+           [repr(P.decide({k: v for k, v in (DINNER if (i + k) % 2 else ok).items() if k != "coded_account"}, {})) for k in range(50)] + \
+           [repr(P.decide(DINNER if (i + k) % 2 else ENT, {})) for k in range(20)]
 with ThreadPoolExecutor(8) as ex:
     out = list(ex.map(run, range(8)))
-assert len({tuple(sorted(set(o))) for o in out}) == 1 and len(set(out[0])) == 4, out[0][:2]
+assert len({tuple(sorted(set(o))) for o in out}) == 1 and len(set(out[0])) == 6, out[0][:2]
 """
     import subprocess, sys
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=300)
@@ -238,7 +239,7 @@ def test_decide_on_the_demo_dinner():
     d = P.decide(UNCODED, {})
     assert d.facts["coded_account"] == "meals_50" and d.derived == {"coded_account": "IRS-meal"}
     assert d.verdict.status == "violation" and [v.rule for v in d.verdict.violations] == ["3.4"]
-    assert d.fix == [] and d.questions == []
+    assert d.fix == [FixStep("pre_approved", False, True)] and d.questions == []
 
 def test_decide_compliant_and_undetermined():
     d = P.decide({**UNCODED, "amount": 30}, {})
@@ -272,3 +273,37 @@ def test_reviewer_decide_empty_facts_and_nan_probs():
     f = dict(role="intern", expense_kind="rideshare", amount=48, hour=9, days_since_purchase=61)
     probs = {"receipt_attached": {"p": float("nan")}, "pre_approved": {"p": 0.0}, "at_company_event": {"p": 0.5}}
     assert P.questions(f, probs) == ["receipt_attached", "at_company_event", "pre_approved"]
+
+
+# Task 5: fix
+from engine.rules import FixStep
+# rule 6.4 (Task 10): entertainment over $100 is never reimbursed; pre-approval cannot help
+ENT = dict(role="employee", expense_kind="entertainment", amount=150, hour=20, days_since_purchase=0,
+           pre_approved=True, receipt_attached=True, coded_account="entertainment_0", client_present=True, at_company_event=False)
+
+def test_fix_for_the_dinner_is_approval_then_recode():
+    assert P.fix(DINNER) == [FixStep("pre_approved", False, True), FixStep("coded_account", "travel", "meals_50")]
+
+def test_no_fix_when_only_immutable_facts_are_wrong():
+    ride = dict(role="intern", expense_kind="rideshare", at_company_event=False, amount=20, hour=9,
+                days_since_purchase=0, pre_approved=True, receipt_attached=True, coded_account="travel")
+    assert P.fix(ride) is None
+
+def test_amount_fix_reads_as_at_or_under():
+    assert P.fix(ENT) == [FixStep("amount", 150, 100.0)]
+
+def test_fix_open_bound_amount_is_whole_cents_and_plain_python():
+    p = Policy([{"id": "x", "layer": "company", "text": "t", "when": {"ge": ["amount", 75]}, "require": False}])
+    (step,) = p.fix({"amount": 80})
+    assert step == ("amount", 80, 74.99) and type(step.to) is float
+    assert p.fix({"amount": 10}) == []
+
+def test_fix_in_decide_and_unknowns_never_reported():
+    d = P.decide(ENT, {})
+    assert d.verdict.status == "violation" and d.fix == [FixStep("amount", 150, 100.0)]
+    assert P.decide({**DINNER, "pre_approved": True, "amount": 30}, {}).fix == [FixStep("coded_account", "travel", "meals_50")]
+    ride = dict(role="intern", expense_kind="rideshare", at_company_event=False, amount=20, hour=9,
+                days_since_purchase=0, pre_approved=True, receipt_attached=True)
+    assert P.decide(ride, {}).fix is None
+    f = {k: v for k, v in DINNER.items() if k != "pre_approved"}  # pre_approved unknown: free, not a step
+    assert P.fix(f) == [FixStep("coded_account", "travel", "meals_50")]
