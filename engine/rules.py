@@ -1,6 +1,8 @@
 import hashlib
 import json
+import math
 import operator
+import os
 import threading
 from pathlib import Path
 from typing import Literal, NamedTuple
@@ -45,6 +47,35 @@ class Verdict(NamedTuple):
     status: Literal["compliant", "violation", "undetermined"]
     violations: list[Violation]
     applied: list[str]
+
+
+class Decision(NamedTuple):
+    facts: dict
+    derived: dict[str, str]
+    verdict: Verdict
+    fix: list | None  # list[FixStep] once Task 5 lands; [] when nothing to fix, None = no controllable fix
+    questions: list[str]
+
+
+def _p(entry) -> float | None:
+    p = entry.get("p") if isinstance(entry, dict) else None
+    return float(p) if isinstance(p, (int, float)) and not isinstance(p, bool) and math.isfinite(p) else None
+
+
+def facts_from_probs(probs: dict[str, dict], hi: float | None = None, lo: float | None = None) -> dict[str, object]:
+    """Jev's per-fact probabilities -> the facts known with confidence. Pure Python, no Z3."""
+    hi = float(os.environ.get("POP_P_HI", 0.85)) if hi is None else hi
+    lo = float(os.environ.get("POP_P_LO", 0.15)) if lo is None else lo
+    facts = {}
+    for name, entry in probs.items():
+        spec, p = FACTS.get(name), _p(entry)
+        if spec is None or p is None:
+            continue
+        if spec.kind == "enum" and entry.get("value") in spec.values and p >= hi:
+            facts[name] = entry["value"]
+        elif spec.kind == "bool" and (p >= hi or p <= lo):
+            facts[name] = p >= hi
+    return facts
 
 
 def _sat(*constraints) -> bool:
@@ -166,6 +197,68 @@ class Policy:
             if z3.is_true(w) or (not z3.is_false(w) and not _sat(*self.dom, *eqs.values(), z3.Not(r.when))):
                 applied.append(r.id)
         return Verdict("compliant", [], applied)
+
+    def required_values(self, facts: dict, fact: str) -> list[str]:
+        return _locked(self._required_values, facts, fact)
+
+    def _required_values(self, facts: dict, fact: str) -> list[str]:
+        # only rules mentioning the fact, so a violation elsewhere can't hide the required value
+        s = z3.Solver()
+        s.add(*self.dom, *[r.formula for r in self.rules if fact in json.dumps(r.raw)], *self._facts_eq(facts).values())
+        out = []
+        for i, v in enumerate(FACTS[fact].values):
+            s.push()
+            s.add(self.vars[fact] == i)
+            if s.check() == z3.sat:
+                out.append(v)
+            s.pop()
+        return out
+
+    def resolve(self, facts: dict) -> tuple[dict, dict[str, str]]:
+        return _locked(self._resolve, facts)
+
+    def _resolve(self, facts: dict) -> tuple[dict, dict[str, str]]:
+        out, derived = dict(facts), {}
+        eqs = list(self._facts_eq(facts).values())
+        for name, spec in FACTS.items():
+            if not spec.derived or name in facts:
+                continue
+            vals = self._required_values(facts, name)
+            if len(vals) != 1:
+                continue
+            out[name] = vals[0]
+            for r in self.rules:
+                if name in json.dumps(r.raw) and not _sat(*self.dom, *eqs, z3.Not(r.when)):
+                    derived[name] = r.id
+                    break
+        return out, derived
+
+    def questions(self, facts: dict, probs: dict[str, dict]) -> list[str]:
+        return _locked(self._questions, facts, probs)
+
+    def _questions(self, facts: dict, probs: dict[str, dict]) -> list[str]:
+        def outcome(f):
+            rf, _ = self._resolve(f)
+            v = self._check(rf)
+            return v.status, {x.rule for x in v.violations}, {n: rf.get(n) for n, s in FACTS.items() if s.derived}
+
+        asked = [n for n, s in FACTS.items() if s.kind == "bool" and n not in facts
+                 and outcome({**facts, n: True}) != outcome({**facts, n: False})]
+        # stable sort: ties keep schema order
+        def doubt(n):
+            p = _p(probs.get(n))
+            return abs((0.5 if p is None else p) - 0.5)
+        return sorted(asked, key=doubt)
+
+    def decide(self, facts: dict, probs: dict[str, dict]) -> Decision:
+        return _locked(self._decide, facts, probs)
+
+    def _decide(self, facts: dict, probs: dict[str, dict]) -> Decision:
+        rf, derived = self._resolve(facts)
+        verdict = self._check(rf)
+        fix = []  # Task 5: replace with self._fix(rf) when verdict.status == "violation"
+        questions = self._questions(rf, probs) if verdict.status == "undetermined" else []
+        return Decision(rf, derived, verdict, fix, questions)
 
 
 def load_policy(*paths: str | Path) -> Policy:

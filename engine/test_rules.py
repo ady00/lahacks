@@ -179,11 +179,96 @@ from engine.test_rules import DINNER
 P = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
 ok = {**DINNER, "amount": 30, "coded_account": "meals_50"}
 def run(i):
-    return [repr(P.check(DINNER if (i + k) % 2 else ok)) for k in range(200)]
+    return [repr(P.check(DINNER if (i + k) % 2 else ok)) for k in range(200)] + \
+           [repr(P.decide({k: v for k, v in (DINNER if (i + k) % 2 else ok).items() if k != "coded_account"}, {})) for k in range(50)]
 with ThreadPoolExecutor(8) as ex:
     out = list(ex.map(run, range(8)))
-assert len({tuple(sorted(set(o))) for o in out}) == 1 and len(set(out[0])) == 2, out[0][:2]
+assert len({tuple(sorted(set(o))) for o in out}) == 1 and len(set(out[0])) == 4, out[0][:2]
 """
     import subprocess, sys
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, (r.returncode, r.stderr[-2000:])
+
+
+# Task 4: facts_from_probs, required_values, resolve, questions, decide
+from engine.rules import facts_from_probs
+
+def test_facts_from_probs_thresholds():
+    probs = {"expense_kind": {"value": "meal", "p": 0.97}, "client_present": {"p": 0.91},
+             "at_company_event": {"p": 0.08}, "receipt_attached": {"p": 0.5}}
+    assert facts_from_probs(probs) == {"expense_kind": "meal", "client_present": True, "at_company_event": False}
+
+def test_facts_from_probs_env_and_bad_entries(monkeypatch):
+    probs = {"client_present": {"p": 0.8}, "colour": {"p": 1.0}, "role": {"value": "ceo", "p": 0.99},
+             "pre_approved": {}, "receipt_attached": {"p": "high"}, "expense_kind": {"value": "meal", "p": True},
+             "amount": {"value": 12, "p": 0.99}, "hour": None}
+    assert facts_from_probs(probs) == {}
+    monkeypatch.setenv("POP_P_HI", "0.75")
+    assert facts_from_probs(probs) == {"client_present": True}
+    assert facts_from_probs({"client_present": {"p": 0.85}, "at_company_event": {"p": 0.15}}, hi=0.9, lo=0.1) == {}
+
+UNCODED = {k: v for k, v in DINNER.items() if k != "coded_account"}
+
+def test_required_account_for_a_client_dinner_is_meals_50():
+    assert P.required_values(UNCODED, "coded_account") == ["meals_50"]
+    unknown_event = {k: v for k, v in UNCODED.items() if k != "at_company_event"}
+    assert P.required_values(unknown_event, "coded_account") == ["meals_50", "meals_100"]
+
+def test_resolve_sets_the_account_and_names_the_rule():
+    facts, derived = P.resolve(UNCODED)
+    assert facts["coded_account"] == "meals_50" and derived == {"coded_account": "IRS-meal"}
+
+def test_resolve_leaves_ambiguous_and_given_accounts_alone():
+    unknown_event = {k: v for k, v in UNCODED.items() if k != "at_company_event"}
+    assert P.resolve(unknown_event) == (unknown_event, {})
+    assert P.resolve(DINNER) == (DINNER, {})  # already coded (wrongly): resolve never overrides
+    assert P.resolve({}) == ({}, {})
+
+def test_question_is_asked_only_when_it_decides():
+    ride = dict(role="intern", expense_kind="rideshare", amount=20, hour=9, days_since_purchase=0, pre_approved=True)
+    assert P.questions(ride, {"at_company_event": {"p": 0.4}}) == ["at_company_event"]
+    assert P.questions({k: v for k, v in UNCODED.items() if k != "client_present"}, {}) == []  # 3.4 broken either way
+
+def test_questions_sorted_by_uncertainty():
+    f = dict(role="intern", expense_kind="rideshare", amount=48, hour=9, days_since_purchase=61)
+    probs = {"at_company_event": {"p": 0.2}, "pre_approved": {"p": 0.6}, "receipt_attached": {"p": "?"}}
+    assert P.questions(f, probs) == ["receipt_attached", "pre_approved", "at_company_event"]
+
+def test_decide_on_the_demo_dinner():
+    d = P.decide(UNCODED, {})
+    assert d.facts["coded_account"] == "meals_50" and d.derived == {"coded_account": "IRS-meal"}
+    assert d.verdict.status == "violation" and [v.rule for v in d.verdict.violations] == ["3.4"]
+    assert d.fix == [] and d.questions == []
+
+def test_decide_compliant_and_undetermined():
+    d = P.decide({**UNCODED, "amount": 30}, {})
+    assert d.verdict.status == "compliant" and d.fix == [] and d.questions == []
+    ride = dict(role="intern", expense_kind="rideshare", amount=20, hour=9, days_since_purchase=0, pre_approved=True)
+    d = P.decide(ride, {})
+    assert d.verdict.status == "undetermined" and d.questions == ["at_company_event"] and d.fix == []
+    assert d.facts == {**ride, "coded_account": "travel"} and d.derived == {"coded_account": "IRS-travel"}
+
+
+# reviewer edge cases (Task 4)
+def test_reviewer_decide_on_the_threshold_repeated_and_not_aliased():
+    at = {**UNCODED, "amount": 35}
+    d1, d2 = P.decide(at, {}), P.decide(at, {})
+    assert d1 == d2 and d1.verdict.status == "compliant" and d1.facts["coded_account"] == "meals_50"
+    d1.facts["amount"] = 999
+    assert at["amount"] == 35 and "coded_account" not in at  # input never mutated, result never aliased
+    v = P.decide({**UNCODED, "amount": 35.01}, {})
+    assert v.verdict.status == "violation" and [x.rule for x in v.verdict.violations] == ["3.4"]
+
+def test_reviewer_facts_from_probs_odd_entries():
+    assert facts_from_probs({}) == {}
+    probs = {"café": {"p": 1.0}, "expense_kind": {"value": ["meal"], "p": 0.99}, "role": {"value": {}, "p": 0.99},
+             "client_present": {"p": float("nan")}, "receipt_attached": {"p": float("inf")},
+             "pre_approved": {"p": 1}, "at_company_event": {"p": 0}}
+    assert facts_from_probs(probs) == {"pre_approved": True, "at_company_event": False}
+
+def test_reviewer_decide_empty_facts_and_nan_probs():
+    d = P.decide({}, {})
+    assert d.verdict.status == "undetermined" and d.derived == {} and d.fix == [] and d.facts == {}
+    f = dict(role="intern", expense_kind="rideshare", amount=48, hour=9, days_since_purchase=61)
+    probs = {"receipt_attached": {"p": float("nan")}, "pre_approved": {"p": 0.0}, "at_company_event": {"p": 0.5}}
+    assert P.questions(f, probs) == ["receipt_attached", "at_company_event", "pre_approved"]
