@@ -18,3 +18,12 @@ def fake_extractor(monkeypatch):
     from api import cases
     monkeypatch.setattr(cases, "extract", lambda text: {"expense_kind": {"value": "meal", "p": 0.97},
         "client_present": {"p": 0.91}, "at_company_event": {"p": 0.08}})
+
+
+@pytest.fixture(scope="package", autouse=True)
+def drop_dotenv_after_api_tests():
+    # api.main loads .env into os.environ; take it back out so tests/ (Person B) never see a live TYPESAFE_API_KEY
+    yield
+    import os, sys
+    for k in getattr(sys.modules.get("api.main"), "DOTENV_KEYS", ()):
+        os.environ.pop(k, None)

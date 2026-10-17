@@ -141,3 +141,20 @@ def test_reviewer_utc_and_bad_timestamps_unknown_case(client):
     assert client.post("/check", json={"text": "x", "employee_id": "e_newhire", "timestamp": "garbage"}).status_code == 422
     assert client.post("/cases/c_00000000/answer", json={"fact": "pre_approved", "value": True}).status_code == 404
     assert client.post("/cases/c_00000000/approve", json={"approver": "e_manager", "approved": True}).status_code == 404
+
+
+def test_keyword_fallback_facts_are_labelled_text(client, monkeypatch):
+    import sys
+    monkeypatch.setattr(cases, "extract", cases._EXTRACT)       # undo the fake: the real chain runs
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.setitem(sys.modules, "extract.jev", None)       # Person B's module unimportable even once it lands
+    c = client.post("/check", json={"text": "Client dinner with Acme's CFO, about $48.", "employee_id": "e_newhire", "timestamp": TS}).json()
+    assert c["facts"]["expense_kind"] == {"value": "meal", "source": "text", "p": 0.9}
+    assert c["facts"]["client_present"]["source"] == "text"
+    a = client.post(f"/cases/{c['case_id']}/approve", json={"approver": "e_manager", "approved": True}).json()
+    assert a["facts"]["expense_kind"]["source"] == "text"       # re-proving keeps the label
+
+
+def test_fixture_extractor_counts_as_jev(client):
+    c = client.post("/check", json={"text": "Client dinner $48", "employee_id": "e_newhire", "timestamp": TS}).json()
+    assert c["facts"]["expense_kind"] == {"value": "meal", "source": "jev", "p": 0.97}

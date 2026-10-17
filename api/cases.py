@@ -29,27 +29,41 @@ def now_la() -> datetime:
 
 
 # ---- Person B's functions, with fallbacks so the API always starts ----
-def extract(text: str) -> dict[str, dict]:
+def _extractor():
+    """(name, fn, source) of the extractor /check will use: Person B's Jev, live Jev, or the keyword stub."""
     try:
         from extract.jev import extract as jev
+        return "extract.jev", jev, "jev"
     except ImportError:
-        jev = None
-    if jev is not None:
-        try:
-            return jev(text)
-        except Exception:
-            log.warning("extract.jev failed; falling back", exc_info=True)
-    elif os.environ.get("TYPESAFE_API_KEY"):
+        pass
+    if os.environ.get("TYPESAFE_API_KEY"):
         try:
             from api.jev_live import extract as live
+            return "live Jev (api.jev_live)", live, "jev"
         except ImportError:
-            live = None
-        if live is not None:
-            try:
-                return live(text)
-            except Exception:
-                log.warning("api.jev_live failed; falling back to the keyword stub", exc_info=True)
-    return extract_stub(text)
+            pass
+    return "keyword stub", extract_stub, "text"
+
+
+def _extract_with_source(text: str) -> tuple[dict[str, dict], str]:
+    name, fn, source = _extractor()
+    if source == "jev":
+        try:
+            return fn(text), source
+        except Exception:
+            log.warning("%s failed; falling back to the keyword stub", name, exc_info=True)
+    return extract_stub(text), "text"  # keyword guesses are not model facts: label them "text"
+
+
+def extract(text: str) -> dict[str, dict]:
+    return _extract_with_source(text)[0]
+
+
+_EXTRACT = extract  # tests patch `extract` with a fake that stands in for Jev
+
+
+def _model_facts(text: str) -> tuple[dict[str, dict], str]:
+    return _extract_with_source(text) if extract is _EXTRACT else (extract(text), "jev")
 
 
 def coded_account_for(qb_category: str) -> str:
@@ -89,7 +103,7 @@ def _valid(name, value):
 
 
 # ---- facts -> case ----
-def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=None):
+def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=None, model_source="jev"):
     """-> (facts, probs, sources). `probs` given = re-proving a stored case without calling the model again."""
     probs = extract(text) if probs is None else probs
     facts, sources = {}, {}
@@ -100,7 +114,7 @@ def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=N
     if (role := _valid("role", (employee or {}).get("role"))) is not None:
         put("role", role, "employee")
     for name, value in facts_from_probs(probs).items():
-        put(name, value, "jev")
+        put(name, value, model_source)
     if amount is not None:
         put("amount", amount, "user")
     elif (a := parse_amount(text)) is not None:
@@ -117,7 +131,7 @@ def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=N
 def to_case(case_id, created_at, employee_id, text, decision, sources, probs, approval, authorization) -> dict:
     v = decision.verdict
     facts = {n: {"value": val, "source": sources.get(n, "rules"),
-                 "p": _p(probs.get(n)) if sources.get(n) == "jev" else None}
+                 "p": _p(probs.get(n)) if sources.get(n) in ("jev", "text") else None}
              for n, val in decision.facts.items()}
     questions = [question(f, _p(probs.get(f))) for f in decision.questions]
     unknown = []
@@ -149,17 +163,17 @@ def _approval(conn, case_id):
     return {"approver": a["approver"], "approved": bool(a["approved"]), "at": a["at"]} if a else None
 
 
-def _prove(conn, case_id, created_at, employee_id, text, amount, timestamp, probs, authorization) -> dict:
+def _prove(conn, case_id, created_at, employee_id, text, amount, timestamp, probs, source, authorization) -> dict:
     """Run the full proof from stored inputs and save it. The extra keys (timestamp, _inputs) stay in the DB;
     the Case response model drops them."""
     ts, has_time = parse_ts(timestamp)
     answers = db.get_answers(conn, case_id)
     approval = _approval(conn, case_id)
     facts, probs, sources = build_facts(text, db.employee(conn, employee_id), amount, ts, has_time, answers,
-                                        approval and approval["approved"], probs)
+                                        approval and approval["approved"], probs, source)
     case = to_case(case_id, created_at, employee_id, text, POLICY.decide(facts, probs), sources, probs,
                    approval, authorization)
-    case["timestamp"], case["_inputs"] = timestamp, {"amount": amount, "probs": probs}
+    case["timestamp"], case["_inputs"] = timestamp, {"amount": amount, "probs": probs, "source": source}
     db.put_case(conn, case, answers)
     return case
 
@@ -175,7 +189,7 @@ def new_case(conn, req) -> dict:
     except ValueError as e:
         raise HTTPException(422, str(e))
     return _prove(conn, "c_" + secrets.token_hex(4), created_at, req.employee_id, req.text, amount, timestamp,
-                  extract(req.text), None)
+                  *_model_facts(req.text), None)
 
 
 def _get(conn, case_id) -> dict:
@@ -188,7 +202,8 @@ def _get(conn, case_id) -> dict:
 def rerun(conn, case_id) -> dict:
     c = _get(conn, case_id)
     return _prove(conn, case_id, c["created_at"], c["employee_id"], c["text"], c["_inputs"]["amount"],
-                  c["timestamp"], c["_inputs"]["probs"], c["authorization"])
+                  c["timestamp"], c["_inputs"]["probs"],
+                  c["_inputs"].get("source", "jev"), c["authorization"])
 
 
 def answer(conn, case_id, fact, value) -> dict:

@@ -1,7 +1,14 @@
 import logging
 import os
+from pathlib import Path
 
-import sentry_sdk
+from api.try_text import load_env
+
+_before = set(os.environ)
+load_env(Path(__file__).resolve().parent.parent / ".env")  # before anything reads the env; a real env var wins
+DOTENV_KEYS = set(os.environ) - _before  # api/conftest.py removes these after the api tests
+
+import sentry_sdk  # noqa: E402
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -26,3 +33,4 @@ def _startup():
         except Exception:  # a bad data file must not keep the API down; /data/reload reports it later
             logging.getLogger(__name__).exception("loading the data dir failed")
         db.record_policy(conn, cases.POLICY.version, [r.raw for r in cases.POLICY.rules])
+    logging.getLogger("uvicorn.error").info("/check extractor: %s", cases._extractor()[0])
