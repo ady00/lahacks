@@ -51,3 +51,32 @@ def test_phrases():
     assert fix_phrase(FixStep("amount", 150, 100)) == "keep it at or under $100"
     assert fix_phrase(FixStep("amount", 150, 74.99)) == "keep it at or under $74.99"
     assert fix_phrase(FixStep("receipt_attached", None, False)) == "set receipt_attached to False"
+
+
+def test_reviewer_entertainment_over_100_amount_fix_and_threshold():
+    ent = {**UNCODED, "expense_kind": "entertainment", "amount": 150, "pre_approved": True, "receipt_attached": True}
+    s = explain(P.decide(ent, {}), P.by_id, [])
+    assert s == ("Entertainment over $100 is never reimbursed (rule 6.4): amount $150, entertainment. "
+                 "Fix: keep it at or under $100. Post it as entertainment_0 (IRS-ent).")
+    assert "rule 6.4" not in explain(P.decide({**ent, "amount": 100}, {}), P.by_id, [])
+
+
+def test_reviewer_undetermined_strings_are_clean_and_repeatable():
+    ride = {**UNCODED, "role": "intern", "expense_kind": "rideshare", "client_present": False, "receipt_attached": True, "amount": 20}
+    ride.pop("at_company_event")
+    d = P.decide(ride, {})
+    s = explain(d, P.by_id, [])
+    assert s == "Depends on: Was this at a company-wide event? Post it as travel (IRS-travel)."
+    assert explain(d, P.by_id, []) == s
+    no_amt = P.decide({k: v for k, v in UNCODED.items() if k != "amount"} | {"receipt_attached": True}, {})
+    s2 = explain(no_amt, P.by_id, ["amount"])
+    assert s2.startswith("Depends on: What is the amount in dollars?")
+    for t in (s, s2):
+        assert "None" not in t and "[]" not in t and "  " not in t and ".." not in t
+
+
+def test_reviewer_phrase_edges():
+    assert phrase("hour", 7) == "at 7:00" and phrase("days_since_purchase", 0) == "0 days ago"
+    assert phrase("amount", 100.0) == "amount $100" and phrase("expense_kind", "café") == "café"
+    assert phrase("client_present", False) == "client_present False"
+    assert question("amount", None) == {"fact": "amount", "text": "What is the amount in dollars?", "p": None, "options": None}
