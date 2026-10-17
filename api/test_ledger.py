@@ -88,3 +88,9 @@ def test_unknown_facts_undetermined_unicode_and_repeat(client):
     assert client.post("/ledger/audit", json={"company": "nobody"}).json()["by_verdict"] == {
         "compliant": 0, "violation": 0, "undetermined": 0}
 
+
+
+def test_coded_account_comes_from_qb_category(client):
+    db.upsert_transactions(db.connect(), [_t("c1")])  # CSV rows carry no coded_account column
+    row = client.get("/ledger").json()["transactions"][0]
+    assert row["coded_account"] == "travel" == row["case"]["facts"]["coded_account"]["value"]
