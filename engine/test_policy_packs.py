@@ -69,3 +69,32 @@ def test_over_35_disagreement_is_exactly_35():
     ex = P.disagreement(P.by_id["3.4"].raw, ge)
     assert ex["amount"] == 35.0 and ex["pre_approved"] is False
     assert P.disagreement(P.by_id["3.4"].raw, P.by_id["3.4"].raw) is None
+
+
+def test_reviewer_threshold_edges_the_per_rule_cases_miss():
+    # 4.1's $25 bound and IRS-receipt-60's 60-day bound: flipping gt->ge survives CASES
+    late = dict(BASE, days_since_purchase=15, receipt_attached=False)
+    assert "4.1" in {v.rule for v in P.check(dict(late, amount=25.01)).violations}
+    assert "4.1" not in {v.rule for v in P.check(dict(late, amount=25)).violations}
+    assert "IRS-receipt-60" in {v.rule for v in P.check(dict(BASE, days_since_purchase=61, receipt_attached=False)).violations}
+    assert "IRS-receipt-60" not in {v.rule for v in P.check(dict(BASE, days_since_purchase=60, receipt_attached=False)).violations}
+
+
+def test_reviewer_facts_from_model_audit_repeat_and_empty_policy():
+    import z3
+    from engine.rules import ENGINE_LOCK
+    from engine.schema import FACTS
+    with ENGINE_LOCK:
+        s = z3.Solver(); s.add(*P.dom, P.vars["amount"] == 12.5)
+        assert s.check() == z3.sat
+        f = P.facts_from_model(s.model())
+    assert set(f) == set(FACTS) and f["amount"] == 12.5 and f["role"] in FACTS["role"].values
+    assert P.audit() == P.audit() == {"dead": [], "conflicts": []}
+    assert Policy([]).audit() == {"dead": [], "conflicts": []}
+
+
+def test_reviewer_disagreement_prohibition_vs_approval():
+    # 6.4 forbids; a looser "needs approval" version differs exactly on approved entertainment over $100
+    loose = {**P.by_id["6.4"].raw, "require": "pre_approved"}
+    ex = P.disagreement(P.by_id["6.4"].raw, loose)
+    assert ex["expense_kind"] == "entertainment" and ex["amount"] > 100 and ex["pre_approved"] is True
