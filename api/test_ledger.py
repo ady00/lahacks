@@ -60,3 +60,31 @@ def test_one_bad_row_does_not_abort(client, monkeypatch):
     assert a["n"] == 3 and a["by_verdict"]["undetermined"] == 2
     row = client.get("/ledger", params={"verdict": "undetermined"}).json()["transactions"][0]
     assert row["case"]["explanation"] == "Could not evaluate: bad row"
+
+
+def test_paging_company_filter_and_unknown_verdict(client):
+    conn = db.connect()
+    db.upsert_transactions(conn, [_t(f"d{i:02d}", 20 + 3 * i) for i in range(12)] + [dict(_t("a1"), company="acme")])
+    full = client.get("/ledger").json()
+    assert full["total"] == 13
+    pages = [r["txn_id"] for o in range(0, 13, 5) for r in client.get("/ledger", params={"limit": 5, "offset": o}).json()["transactions"]]
+    assert pages == [r["txn_id"] for r in full["transactions"]]
+    assert client.get("/ledger", params={"company": "acme"}).json()["total"] == 1
+    v = client.get("/ledger", params={"company": "demo", "verdict": "violation", "limit": 1}).json()
+    assert v["total"] == sum(r["verdict"] == "violation" for r in full["transactions"] if r["company"] == "demo") > 1
+    assert len(v["transactions"]) == 1
+    assert client.get("/ledger", params={"verdict": "bogus"}).json() == {"transactions": [], "total": 0}
+
+
+def test_unknown_facts_undetermined_unicode_and_repeat(client):
+    conn = db.connect()
+    mid = {"expense_kind": {"value": "meal", "p": 0.5}, "client_present": {"p": 0.5}, "at_company_event": {"p": 0.5}}
+    db.upsert_transactions(conn, [dict(_t("u1", 20, mid), memo="CAFÉ ☕ 東京"), _t("u2", 20)])
+    a = client.post("/ledger/audit", json={"company": "demo"}).json()
+    assert a["by_verdict"] == {"compliant": 0, "violation": 0, "undetermined": 2} and a["n"] == 2
+    assert client.post("/ledger/audit", json={"company": "demo"}).json()["by_verdict"] == a["by_verdict"]
+    rows = client.get("/ledger").json()["transactions"]
+    assert rows[0]["memo"] == "CAFÉ ☕ 東京" and all(r["case"]["questions"] for r in rows)
+    assert client.post("/ledger/audit", json={"company": "nobody"}).json()["by_verdict"] == {
+        "compliant": 0, "violation": 0, "undetermined": 0}
+
