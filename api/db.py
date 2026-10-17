@@ -3,6 +3,7 @@ import csv
 import json
 import os
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 SCHEMA = """
@@ -147,28 +148,63 @@ def _csv(path: Path):
         yield from csv.DictReader(f)
 
 
-def load_data_dir(conn, data_dir=None):
+def load_data_dir(conn, data_dir=None) -> dict:
+    """Load B's files; never raises on a bad row. Returns counts plus a reason for every skipped transactions row."""
     d = Path(data_dir or os.environ.get("POP_DATA_DIR", "data"))
+    out = {"transactions": 0, "employees": 0, "extractions": 0, "approvals": 0, "skipped": []}
     if (p := d / "employees.csv").exists():
-        conn.executemany("INSERT OR REPLACE INTO employees VALUES (?,?,?,?)",
-                         [(r["employee_id"], r["name"], r["role"], r.get("manager_id", "")) for r in _csv(p)])
+        emps = [(r["employee_id"], r.get("name") or "", r.get("role") or "", r.get("manager_id") or "")
+                for r in _csv(p) if r.get("employee_id")]
+        conn.executemany("INSERT OR REPLACE INTO employees VALUES (?,?,?,?)", emps)
+        out["employees"] = len(emps)
     if (p := d / "approvals.csv").exists():
         conn.execute("DELETE FROM approvals WHERE case_id IS NULL")  # file rows only; /approve rows survive
-        conn.executemany("INSERT INTO approvals(case_id, txn_id, approver, approved, at) VALUES (NULL,?,?,1,?)",
-                         [(r["txn_id"], r["approver"], r["approved_at"]) for r in _csv(p)])
+        apps = [(r["txn_id"], r.get("approver"), r.get("approved_at")) for r in _csv(p) if r.get("txn_id")]
+        conn.executemany("INSERT INTO approvals(case_id, txn_id, approver, approved, at) VALUES (NULL,?,?,1,?)", apps)
+        out["approvals"] = len(apps)
     ext = {}
     if (p := d / "extractions.jsonl").exists():
         for line in p.read_text(encoding="utf-8").splitlines():
-            if line.strip():
+            try:
                 o = json.loads(line)
                 ext[o["txn_id"]] = json.dumps(o["facts"], sort_keys=True)
-    rows = []
+            except (ValueError, KeyError, TypeError):  # blank line, bad JSON, no txn_id/facts: skip
+                pass
+        out["extractions"] = len(ext)
+    rows, seen, owner = [], set(), {}
     if (p := d / "transactions.csv").exists():
         for r in _csv(p):
-            r["amount"] = float(r["amount"])
-            r["receipt_attached"] = int(r["receipt_attached"]) if r.get("receipt_attached") not in (None, "") else None
+            tid = (r.get("txn_id") or "").strip()
+            r["txn_id"] = tid
+            seen.add(tid)
+            try:
+                amount = float(r.get("amount"))
+            except (TypeError, ValueError):
+                amount = 0
+            if not tid:
+                reason = "missing txn_id"
+            elif not amount > 0:  # also NaN
+                reason = "amount must be > 0 (refunds and credits are not audited)"
+            else:
+                try:
+                    datetime.fromisoformat((r.get("timestamp") or "").strip())
+                    reason = None
+                except ValueError:
+                    reason = "bad timestamp"
+            if reason is None:
+                if tid not in owner:
+                    old = conn.execute("SELECT company FROM transactions WHERE txn_id = ?", (tid,)).fetchone()
+                    owner[tid] = old[0] if old else r.get("company")
+                if owner[tid] != r.get("company"):
+                    reason = "txn_id collision"
+            if reason:
+                out["skipped"].append({"txn_id": tid, "reason": reason})
+                continue
+            r["amount"] = amount
+            ra = (r.get("receipt_attached") or "").strip()
+            r["receipt_attached"] = int(ra) if ra else None  # blank = unknown, never 0
+            r["employee_id"] = r.get("employee_id") or None
             rows.append(r)
-    seen = {r["txn_id"] for r in rows}
     for r in rows:  # no extraction in the file this time: keep the stored one so a reload doesn't churn verdicts
         r["extraction_json"] = ext.get(r["txn_id"]) or (conn.execute(
             "SELECT extraction_json FROM transactions WHERE txn_id = ?", (r["txn_id"],)).fetchone() or [None])[0]
@@ -176,4 +212,6 @@ def load_data_dir(conn, data_dir=None):
         if txn_id not in seen and (old := _one(conn, "SELECT * FROM transactions WHERE txn_id = ?", (txn_id,))):
             rows.append(dict(old, extraction_json=facts))
     upsert_transactions(conn, rows)
+    out["transactions"] = len({r["txn_id"] for r in rows if r["txn_id"] in seen})
     conn.commit()
+    return out

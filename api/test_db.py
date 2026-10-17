@@ -1,7 +1,7 @@
 import json
 from contextlib import closing
 
-from api import db
+from api import cases, db
 
 
 def test_init_twice_and_seed_employees(tmp_path):
@@ -143,3 +143,21 @@ def test_reviewer_per_request_connection_under_testclient(tmp_path, monkeypatch)
     assert errs == []
     with closing(db.connect()) as conn:  # opened in the test thread, sees the route threads' commits
         assert conn.execute("select count(*) from approvals").fetchone()[0] == 40
+
+
+def test_load_skips_bad_rows_and_bad_json_never_raises(tmp_path):
+    H = "txn_id,company,employee_id,vendor,memo,amount,timestamp,qb_category,receipt_attached,receipt_date,source\n"
+    ok = "ok,demo,,V,M,5,2026-09-30,Travel,,,intuit\n"
+    (tmp_path / "transactions.csv").write_text(H + ok + "a,demo,,V,M,abc,2026-09-30,Travel,1,,intuit\n"
+        "b,demo,,V,M,5,yesterday,Travel,1,,intuit\n,demo,,V,M,5,2026-09-30,Travel,1,,intuit\n"
+        "ok,other,,V,M,5,2026-09-30,Travel,1,,intuit\n")
+    (tmp_path / "extractions.jsonl").write_text('not json\n{"facts": {}}\n[1]\n')
+    conn = db.connect(tmp_path / "t.db")
+    r = db.load_data_dir(conn, tmp_path)
+    assert (r["transactions"], r["extractions"]) == (1, 0)
+    assert [s["reason"] for s in r["skipped"]] == ["amount must be > 0 (refunds and credits are not audited)",
+        "bad timestamp", "missing txn_id", "txn_id collision"] and r["skipped"][2]["txn_id"] == ""
+    row = db.list_transactions(conn)[0]
+    assert row["employee_id"] is None and row["receipt_attached"] is None
+    assert cases.decide_transaction(row, None, False, None)["verdict"]  # no employee: no exception
+    assert db.load_data_dir(conn, tmp_path / "missing")["skipped"] == []

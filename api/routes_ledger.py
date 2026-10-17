@@ -2,9 +2,8 @@ from contextlib import closing
 
 from fastapi import APIRouter
 
-from api import cases, db, models, samples
+from api import cases, db, models
 from api import ledger as L
-from api.samples import stub
 
 router = APIRouter()
 
@@ -24,4 +23,5 @@ def audit(req: models.AuditRequest):
 
 @router.post("/data/reload", response_model=models.ReloadOut)
 def reload_data():
-    return stub(samples.SAMPLE_RELOAD)
+    with closing(db.connect()) as conn:
+        return db.load_data_dir(conn)

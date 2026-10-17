@@ -44,7 +44,8 @@ def _scope(company, verdict):
 def _row(r) -> dict:
     case = json.loads(r["case_json"])
     return {**{k: r[k] if r[k] is not None else "" for k in
-               ("txn_id", "company", "employee_id", "vendor", "memo", "amount", "timestamp", "qb_category")},
+               ("txn_id", "company", "employee_id", "vendor", "memo", "timestamp", "qb_category")},
+            "amount": r["amount"],
             "coded_account": r["coded_account"] or cases.coded_account_for(r["qb_category"] or ""),
             "verdict": r["verdict"], "violations": [v["rule"] for v in case["violations"]], "case": case}
 
