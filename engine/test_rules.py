@@ -307,3 +307,34 @@ def test_fix_in_decide_and_unknowns_never_reported():
     assert P.decide(ride, {}).fix is None
     f = {k: v for k, v in DINNER.items() if k != "pre_approved"}  # pre_approved unknown: free, not a step
     assert P.fix(f) == [FixStep("coded_account", "travel", "meals_50")]
+
+
+# reviewer edge cases (Task 5)
+def test_reviewer_fix_empty_inputs_and_repeat():
+    assert P.fix({}) == [] and Policy([]).fix(DINNER) == []
+    assert all(P.fix(DINNER) == P.fix(DINNER) for _ in range(5))
+    with pytest.raises(KeyError):
+        P.fix({**DINNER, "colour": "red"})
+
+def test_reviewer_fix_amount_on_threshold_and_sub_cent():
+    assert P.fix({**ENT, "amount": 100}) == []  # gt 100: exactly 100 is fine
+    assert P.fix({**ENT, "amount": 100.01}) == [FixStep("amount", 100.01, 100.0)]
+    assert P.fix({**ENT, "amount": 100.005}) == [FixStep("amount", 100.005, 100.0)]
+
+def test_reviewer_fix_cheapest_across_rules_and_applied_is_never_a_violation():
+    rule = lambda i, w, r: {"id": i, "layer": "company", "text": "t", "when": w, "require": r}
+    p = Policy([rule("3.4", {"gt": ["amount", 35]}, "pre_approved"),
+                rule("9.1", {"and": [{"eq": ["expense_kind", "rideshare"]}, {"gt": ["amount", 75]}]}, "pre_approved"),
+                rule("7.2", {"and": [{"eq": ["expense_kind", "hotel"]}, {"gt": ["amount", 300]}]}, "pre_approved"),
+                rule("8.2", {"and": [{"eq": ["expense_kind", "equipment"]}, {"gt": ["amount", 250]}]},
+                     {"and": ["pre_approved", "receipt_attached"]})])
+    base = dict(role="employee", amount=80, pre_approved=False, receipt_attached=True)
+    for kind in ("rideshare", "hotel"):
+        f = {**base, "expense_kind": kind}
+        assert p.fix(f) == [FixStep("pre_approved", False, True)]
+    eq = {**base, "expense_kind": "equipment", "amount": 300, "receipt_attached": False}
+    steps = p.fix(eq)
+    assert sum(FACTS[s.fact].weight for s in steps) == 3
+    for f in ({**base, "expense_kind": "rideshare"}, eq, {k: v for k, v in eq.items() if k != "expense_kind"}):
+        applied = {**f, **{s.fact: s.to for s in p.fix(f)}}
+        assert p.check(applied).status != "violation"
