@@ -8,3 +8,8 @@ build/
 .env
 
 *.db
+# Local source downloads and reproducible backend output
+data/*.tar.gz
+artifacts/
+analysis/plan_pages/
+analysis/plan_extracted.txt

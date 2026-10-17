@@ -17,10 +17,18 @@ dependencies = [
     "uvicorn[standard]",
     "pytest",
     "sentry-sdk[fastapi]",
+    "PyYAML>=6.0",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
 
 [project.scripts]
 jev-z3 = "jev_z3.cli:main"
+purchase-backend = "jev_z3.backend.cli:main"
+
+[tool.setuptools.package-data]
+"jev_z3.backend" = ["policies/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["engine", "api", "tests"]

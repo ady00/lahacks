@@ -1,0 +1,11 @@
+{
+  "name": "PDF demo company policy",
+  "version": "demo-2026-10-17-v1",
+  "review_status": "draft",
+  "assumptions": ["Applies to selected demo purchase cases, not every bank movement.", "Strict receipt deadline is a company rule, not a universal IRS requirement.", "A later approval cannot establish pre-approval for a posted purchase."],
+  "rules": [
+    {"id":"COMP-3.4","layer":"company","text":"Expenses strictly over $35 require pre-approval.","when":{"gt":[{"fact":"amount_cents"},3500]},"require":{"fact":"pre_approved"},"fix":{"action":"request_preapproval","description":"Obtain authorized approval before purchase. For a posted purchase, escalate the historical violation; do not backdate approval."}},
+    {"id":"COMP-5.2","layer":"company","text":"Intern rideshare and airfare purchases are permitted only for company events.","when":{"and":[{"eq":[{"fact":"role"},"intern"]},{"or":[{"eq":[{"fact":"expense_kind"},"rideshare"]},{"eq":[{"fact":"expense_kind"},"airfare"]}]}]},"require":{"fact":"at_company_event"},"fix":{"action":"confirm_event_or_choose_alternative","description":"Provide evidence of an actual company event, or choose an eligible purchase. Do not change the factual purpose."}},
+    {"id":"COMP-RECEIPT-60","layer":"company","text":"When a receipt is required, submit it within 60 days of purchase. After day 60, evidence of timely submission is required.","when":{"and":[{"fact":"receipt_required"},{"gt":[{"fact":"days_since_purchase"},60]}]},"require":{"fact":"receipt_timely"},"fix":{"action":"supply_timely_receipt_evidence","description":"Supply an existing receipt submission record dated within 60 days, or escalate a late submission. Uploading today cannot erase a missed deadline."}}
+  ]
+}
