@@ -161,3 +161,23 @@ def test_load_skips_bad_rows_and_bad_json_never_raises(tmp_path):
     assert row["employee_id"] is None and row["receipt_attached"] is None
     assert cases.decide_transaction(row, None, False, None)["verdict"]  # no employee: no exception
     assert db.load_data_dir(conn, tmp_path / "missing")["skipped"] == []
+
+
+def test_reviewer_crlf_quoted_multiline_memo_z_timestamp_extra_column(tmp_path):
+    H = "txn_id,company,employee_id,vendor,memo,amount,timestamp,qb_category,receipt_attached,receipt_date,source,extra\r\n"
+    (tmp_path / "transactions.csv").write_text(H + 't1,demo,e_newhire,Café,"DINNER, 東京\r\nline 2",18.5,'
+                                               "2026-09-30T15:10:00Z,Travel,1,,intuit,zzz\r\n", newline="")
+    conn = db.connect(tmp_path / "t.db")
+    assert db.load_data_dir(conn, tmp_path)["transactions"] == 1
+    row = db.list_transactions(conn)[0]
+    assert row["memo"] == "DINNER, 東京\r\nline 2" and row["amount"] == 18.5
+    assert cases.decide_transaction(row, None, False, db.employee(conn, "e_newhire"))["facts"]["hour"]["value"] == 8
+
+
+def test_reviewer_approvals_reloaded_twice_no_duplicates_and_approve_rows_survive(tmp_path):
+    (tmp_path / "approvals.csv").write_text("txn_id,approver,approved_at\nt1,e_manager,2026-09-29\n")
+    conn = db.connect(tmp_path / "t.db"); db.init(conn)
+    db.add_approval(conn, "c_1", "t9", "e_manager", True, "2026-09-30")
+    for _ in range(2):
+        assert db.load_data_dir(conn, tmp_path)["approvals"] == 1
+    assert [tuple(r) for r in conn.execute("select case_id, txn_id from approvals order by id")] == [("c_1", "t9"), (None, "t1")]
