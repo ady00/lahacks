@@ -1,12 +1,47 @@
 import Link from "next/link";
 import { get, post } from "@/lib/api";
-import type { AuditSummary, LedgerOut } from "@/lib/types";
+import { DECIMAL, NUMERIC, type AuditSummary, type LedgerOut, type LedgerRow } from "@/lib/types";
 import { usd, when } from "@/lib/format";
 import { VerdictChip } from "@/components/VerdictChip";
 import { PageHeader } from "@/components/PageHeader";
-import { card, h2, muted } from "@/lib/ui";
+import { btnPrimary, card, h2, muted } from "@/lib/ui";
 
 const HEAD = ["Transaction", "Vendor", "Memo", "Amount", "When", "QuickBooks category", "Coded account", "Verdict", "Rules broken"];
+
+const field = "rounded-md border border-main bg-white px-2 py-1 text-xs text-ink focus:border-secondary focus:outline-none";
+
+// "Needs a detail" opens to the engine's next question; answering re-decides just this row (POST /ledger/{id}/answer).
+function Verdict({ t }: { t: LedgerRow }) {
+  const q = t.verdict === "undetermined" ? t.case?.questions[0] : undefined;
+  if (!q) return <VerdictChip verdict={t.verdict} />;
+  const numeric = NUMERIC.has(q.fact);
+  return (
+    <details className="group">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <VerdictChip verdict={t.verdict} />
+        <span className="ml-1 inline-block text-[10px] text-[#D97706] transition-transform group-open:rotate-180">▾</span>
+      </summary>
+      <form method="post" action="/act/ledger-answer" className="mt-2 w-56 space-y-2 rounded-md border border-amber-200 bg-amber-50/70 p-2.5">
+        <input type="hidden" name="txn_id" value={t.txn_id} />
+        <input type="hidden" name="fact" value={q.fact} />
+        <label className="block text-xs font-medium text-amber-950">
+          {q.text}
+          {numeric ? (
+            <input name="value" type="number" required step={DECIMAL.has(q.fact) ? "0.01" : "1"} min="0" className={`${field} mt-1.5 w-full`} />
+          ) : (
+            <select name="value" required defaultValue="" className={`${field} mt-1.5 w-full`}>
+              <option value="" disabled>Choose…</option>
+              {(q.options ?? ["true", "false"]).map((v) => (
+                <option key={v} value={v}>{q.options ? v : v === "true" ? "Yes" : "No"}</option>
+              ))}
+            </select>
+          )}
+        </label>
+        <button className={`${btnPrimary} px-3 py-1 text-xs`}>Save</button>
+      </form>
+    </details>
+  );
+}
 
 export default async function LedgerPage() {
   const [{ transactions, total }, audit] = await Promise.all([
@@ -15,7 +50,7 @@ export default async function LedgerPage() {
   ]);
   return (
     <div className="animate-fade-in-up space-y-6">
-      <PageHeader title="Ledger" text="Every posted transaction, checked against the same rules as a new purchase." />
+      <PageHeader title="Ledger" text="Every posted transaction, newest first, checked against the same rules as a new purchase." />
       <section className={`${card} p-7 hover:shadow-[0_14px_30px_-6px_rgba(15,23,42,0.08)]`}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h2 className={h2}>
@@ -67,7 +102,7 @@ export default async function LedgerPage() {
                 <td className={`px-3.5 py-2.5 whitespace-nowrap ${muted}`}>{when(t.timestamp)}</td>
                 <td className="px-3.5 py-2.5">{t.qb_category}</td>
                 <td className="px-3.5 py-2.5 font-mono text-xs">{t.coded_account}</td>
-                <td className="px-3.5 py-2.5"><VerdictChip verdict={t.verdict} /></td>
+                <td className="px-3.5 py-2.5 align-top"><Verdict t={t} /></td>
                 <td className="px-3.5 py-2.5 font-mono text-xs">{t.violations.length ? t.violations.join(", ") : <span className={muted}>none</span>}</td>
               </tr>
             ))}

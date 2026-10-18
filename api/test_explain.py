@@ -14,7 +14,7 @@ UNCODED = {k: v for k, v in DINNER.items() if k != "coded_account"}
 def test_dinner_explanation_is_templated():
     d = P.decide(UNCODED, {})
     assert explain(d, P.by_id, []) == ("Meals with clients and partners are limited to $80 per person (rule MEAL-client-80): "
-                                       "amount $200, 2 people, client present, meal. Fix: keep it at or under $160. Post it as meals_50 (IRS-meal).")
+                                       "amount $200, 2 people, client present, meal. Fix: keep it at or under $160. Post it as meals_50 (IRS-meal). 50% deductible (IRS-meal).")
 
 
 def test_question_for_enum_carries_options():

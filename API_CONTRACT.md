@@ -45,6 +45,8 @@ Fourteen routes; every body and response is JSON, and paths are relative to `API
 | `POST /ledger/audit` | `{company}` | audit summary | 200 | dashboard, agent |
 | `GET /policy` | – | `{version, rules, facts}` | 200 | dashboard Rules page |
 | `POST /policy/audit` | – | `{dead, conflicts}` | 200 | dashboard Rules page |
+| `GET /policy/irs` | – | `{enabled, policy_version, rules, audit, summary}` | 200 | dashboard IRS page |
+| `POST /policy/layers` | `{irs: bool}` | `{version, rules, facts}` | 200 | dashboard IRS page |
 | `POST /bank-rules/check` | `{rules: [bank rule]}` | `{shadowed, overlaps}` | 200 · 422 | dashboard Rules page |
 | `GET /eval` | – | the evaluation table, `eval/results.json` as-is | 200 | dashboard Evaluation page |
 | `POST /data/reload` | – | `{transactions, employees, extractions, approvals, skipped}` | 200 | B, after refreshing the data files |
@@ -148,6 +150,10 @@ Six more shapes cover everything that is not a case. Field names are final; `/do
 ```
 
 `POST /policy/audit` returns `{"dead": ["rule ids whose condition no transaction can meet"], "conflicts": [{"a": "X", "b": "Y", "example": {"role": "intern", "expense_kind": "meal"}}]}`; `example` is a full fact map for a transaction that triggers both rules.
+
+`GET /policy/irs` runs the IRS layer's self-test with Z3 on every call and returns `{enabled, policy_version, rules, audit, summary}`. Each entry of `rules` is the raw rule (`id, layer, text, cite, url, when, require`) plus `facts_used`, `prohibition` (require is `false`), `breaks` and `holds` (witnesses: `{facts, verdict, violations, because, applied, also}`, where `facts` is a full fact map Z3 built, `because` maps rule → unsat core, `also` lists other rules the breaker unavoidably trips; `holds` is null for a prohibition), `implied_by` (company rule ids that already force it, `[]` when only the IRS layer catches it) and `ms`. `audit` is the dead/conflicts check restricted to IRS rules; `summary` is `{rules, implied_by_company, irs_only, prohibitions}`. The report covers the full pack even while the layer is off.
+
+`POST /policy/layers` with `{"irs": false}` swaps the live policy to the company layer plus dashboard rules (a new `version`; `/health` follows); `{"irs": true}` restores it. In memory only: a restart turns the layer back on.
 
 **Bank-rule check** (`POST /bank-rules/check`). Input is QuickBooks' own model: description contains every word, amount in a range, assign a category, first match in list order wins.
 

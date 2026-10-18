@@ -25,6 +25,13 @@ LABEL = {
     "tenure_days": "Days since start date", "days_before_travel": "Days booked ahead", "attendees": "People",
     "nights": "Nights", "days": "Days covered", "approved_issue": "Approved issue", "booked_via_navan": "Booked via Navan",
     "traveling": "On a business trip", "round_trip": "Round trip", "government_present": "Government official present",
+    "deductible": "Deductible", "miles": "Miles", "companion_present": "Spouse or family along", "commuting": "Commuting",
+    "travel_class": "Seat class", "segment_hours": "Segment hours", "international": "International",
+    "customer_trip": "Customer, speaking or conference trip", "frequent_traveler": "Frequent traveler",
+    "tall_traveler": "Over 6'5\"", "car_above_intermediate": "Car above intermediate", "rental_car": "Rental car",
+    "mileage_and_fuel": "Mileage and fuel both claimed", "tip_over_20": "Tip over 20%", "cash_equivalent": "Cash or gift card",
+    "gift_occasion": "Gift occasion", "includes_fees": "Includes setup or hardware fees", "whole_family_plan": "Whole family plan",
+    "ap_approved": "AP Admin approved", "on_leave": "On leave", "personal_travel": "Personal travel",
 }
 _OPS = {"eq": "is", "neq": "is not", "gt": ">", "ge": "≥", "lt": "<", "le": "≤"}
 

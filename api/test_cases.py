@@ -164,3 +164,19 @@ def test_keyword_fallback_facts_are_labelled_text(client, monkeypatch):
 def test_fixture_extractor_counts_as_jev(client):
     c = client.post("/check", json={"text": "Client dinner $48", "employee_id": "e_newhire", "timestamp": TS}).json()
     assert c["facts"]["expense_kind"] == {"value": "meal", "source": "jev", "p": 0.97}
+
+
+def test_miles_are_read_from_the_text():
+    from api.cases import parse_miles
+    assert parse_miles("Drove 120 miles to the client site, $95") == 120
+    assert parse_miles("about 12 mi round trip") == 12 and parse_miles("Uber, $40") is None
+
+
+def test_ledger_row_falls_back_to_the_keyword_reading_for_facts_the_stored_extraction_never_asked():
+    # data/extractions.jsonl predates the commuting question; a plain airport ride must not hang on it
+    from api.cases import decide_transaction
+    row = {"txn_id": "t_x", "company": "demo", "employee_id": "e_newhire", "vendor": "Uber", "memo": "Uber to the airport for the Denver trip",
+           "amount": "62", "timestamp": "2026-10-10T08:00:00", "qb_category": "Travel", "receipt_attached": "1", "receipt_date": ""}
+    c = decide_transaction(row, {"expense_kind": {"value": "rideshare", "p": 1.0}, "at_company_event": {"p": 0.05}, "client_present": {"p": 0.05}}, False, None)
+    assert c["facts"]["commuting"] == {"value": False, "source": "text", "p": 0.1}
+    assert c["facts"]["expense_kind"]["source"] == "jev" and "commuting" not in [q["fact"] for q in c["questions"]]

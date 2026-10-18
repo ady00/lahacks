@@ -157,6 +157,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ledger/{txn_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer */
+        post: operations["answer_ledger__txn_id__answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ledger/audit": {
         parameters: {
             query?: never;
@@ -219,6 +236,47 @@ export interface paths {
         put?: never;
         /** Policy Audit */
         post: operations["policy_audit_policy_audit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/policy/irs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Policy Irs
+         * @description Every IRS rule with its citation, a Z3-built purchase that breaks it and one that satisfies it (both re-proved),
+         *     and the company rules that already imply it. Reported from the full packs even while the layer is switched off.
+         */
+        get: operations["policy_irs_policy_irs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/policy/layers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Policy Layers
+         * @description Switch the IRS layer on or off; the live policy is swapped and cases from now on prove against it.
+         */
+        post: operations["policy_layers_policy_layers_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -535,6 +593,11 @@ export interface components {
             amount?: number | null;
             /** Timestamp */
             timestamp?: string | null;
+            /**
+             * Infer
+             * @default false
+             */
+            infer: boolean;
         };
         /** Conflict */
         Conflict: {
@@ -662,7 +725,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "jev" | "user" | "text" | "employee" | "approvals" | "ledger" | "derived" | "rules" | "answer" | "product";
+            source: "jev" | "user" | "text" | "employee" | "approvals" | "ledger" | "derived" | "rules" | "answer" | "product" | "claude";
             /** P */
             p?: number | null;
         };
@@ -688,6 +751,60 @@ export interface components {
             policy_version: string;
             /** Stub */
             stub: boolean;
+        };
+        /** IrsReport */
+        IrsReport: {
+            /** Enabled */
+            enabled: boolean;
+            /** Policy Version */
+            policy_version: string;
+            /** Rules */
+            rules: components["schemas"]["IrsRule"][];
+            audit: components["schemas"]["PolicyAudit"];
+            summary: components["schemas"]["IrsSummary"];
+        };
+        /** IrsRule */
+        IrsRule: {
+            /** Id */
+            id: string;
+            /** Layer */
+            layer: string;
+            /** Text */
+            text: string;
+            /** Cite */
+            cite: string;
+            /** Url */
+            url: string;
+            /** When */
+            when: unknown;
+            /** Require */
+            require: unknown;
+            /** Facts Used */
+            facts_used: string[];
+            /** Prohibition */
+            prohibition: boolean;
+            breaks: components["schemas"]["Witness"] | null;
+            holds: components["schemas"]["Witness"] | null;
+            /** Implied By */
+            implied_by: string[];
+            /** Ms */
+            ms: number;
+        };
+        /** IrsSummary */
+        IrsSummary: {
+            /** Rules */
+            rules: number;
+            /** Implied By Company */
+            implied_by_company: number;
+            /** Irs Only */
+            irs_only: number;
+            /** Prohibitions */
+            prohibitions: number;
+        };
+        /** LayersIn */
+        LayersIn: {
+            /** Irs */
+            irs: boolean;
         };
         /** LedgerOut */
         LedgerOut: {
@@ -876,6 +993,31 @@ export interface components {
             text: string;
             /** Because */
             because: string[];
+        };
+        /**
+         * Witness
+         * @description A purchase Z3 built (every fact set), re-proved by the engine.
+         */
+        Witness: {
+            /** Facts */
+            facts: {
+                [key: string]: unknown;
+            };
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "compliant" | "violation" | "undetermined";
+            /** Violations */
+            violations: string[];
+            /** Because */
+            because: {
+                [key: string]: string[];
+            };
+            /** Applied */
+            applied: string[];
+            /** Also */
+            also: string[];
         };
     };
     responses: never;
@@ -1182,6 +1324,41 @@ export interface operations {
             };
         };
     };
+    answer_ledger__txn_id__answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                txn_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     audit_ledger_audit_post: {
         parameters: {
             query?: never;
@@ -1271,6 +1448,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PolicyAudit"];
+                };
+            };
+        };
+    };
+    policy_irs_policy_irs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IrsReport"];
+                };
+            };
+        };
+    };
+    policy_layers_policy_layers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LayersIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

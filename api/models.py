@@ -4,7 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 Scalar = bool | str | float | int | None
-Source = Literal["jev", "user", "text", "employee", "approvals", "ledger", "derived", "rules", "answer", "product"]
+Source = Literal["jev", "user", "text", "employee", "approvals", "ledger", "derived", "rules", "answer", "product", "claude"]
 Verdict = Literal["compliant", "violation", "undetermined"]
 
 
@@ -18,6 +18,7 @@ class CheckRequest(_M):
     employee_id: str
     amount: float | None = Field(None, gt=0)
     timestamp: str | None = None
+    infer: bool = False  # opt in: a local `claude -p` call fills the facts the extractor leaves open
 
 
 class AnswerRequest(_M):
@@ -182,6 +183,51 @@ class Conflict(_M):
 class PolicyAudit(_M):
     dead: list[str]
     conflicts: list[Conflict]
+
+
+class LayersIn(_M):
+    irs: bool  # the IRS layer on or off; the company layer is always on
+
+
+class Witness(_M):
+    """A purchase Z3 built (every fact set), re-proved by the engine."""
+    facts: dict
+    verdict: Verdict
+    violations: list[str]
+    because: dict[str, list[str]]  # rule -> the unsat core: the facts that decided it
+    applied: list[str]
+    also: list[str]  # other rules the witness trips, when no single-violation witness exists
+
+
+class IrsRule(_M):
+    id: str
+    layer: str
+    text: str
+    cite: str
+    url: str
+    when: object
+    require: object
+    facts_used: list[str]
+    prohibition: bool          # require is false: no purchase can satisfy it once its condition holds
+    breaks: Witness | None
+    holds: Witness | None      # None for a prohibition
+    implied_by: list[str]      # company rules that already force it ([] = only the IRS layer catches it)
+    ms: float
+
+
+class IrsSummary(_M):
+    rules: int
+    implied_by_company: int
+    irs_only: int
+    prohibitions: int
+
+
+class IrsReport(_M):
+    enabled: bool
+    policy_version: str
+    rules: list[IrsRule]
+    audit: "PolicyAudit"
+    summary: IrsSummary
 
 
 class RuleText(_M):

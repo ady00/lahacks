@@ -41,12 +41,13 @@ One FastAPI server holds all of the logic. The Next.js dashboard, the text-messa
                                  ▼
   ┌──────────────────────────────────────────────────────────────┐
   │ 2. DECIDE  (Z3)                                              │
-  │   37 rules, each  when(facts) ⇒ require(facts)               │
+  │   every rule, company + IRS:  when(facts) ⇒ require(facts)   │
   │   • unknown facts stay free variables                        │
   │   • violation  → every broken rule + its unsat core          │
   │   • compliant  → the rules that applied and held             │
   │   • undetermined → the yes/no fact whose answer flips it     │
-  │   • derived facts (coded_account = meals_50) forced by rules │
+  │   • derived facts forced by the IRS layer:                   │
+  │     coded_account = meals_50, deductible = 50%               │
   └──────────────────────────────┬───────────────────────────────┘
                                  ▼
   ┌──────────────────────────────────────────────────────────────┐
@@ -71,13 +72,13 @@ One FastAPI server holds all of the logic. The Next.js dashboard, the text-messa
 
 **1. Read.** The request text goes to [Jev](https://typesafe.ai) (Typesafe's "System One" model) with one typed question per fact: a `choice` question for the expense kind, and `noul` (yes/no) questions for *client present*, *at a team event*, *on a business trip* and *government official present*. Jev returns calibrated probabilities, never free text. A probability at or above 0.7 (or at or below 0.3) becomes a known fact; anything in between stays **unknown**. Amount, time of day, days since purchase, role, tenure and prior approvals come from the form, the clock and the employee records, never from a model. The exact question wording lives in [api/jev_live.py](api/jev_live.py) and was tuned on a labeled set with [api/bench_jev.py](api/bench_jev.py) (45/45 expense kinds, zero confidently-wrong booleans). Without a `TYPESAFE_API_KEY` a keyword stub stands in, and the dashboard labels those facts as read from text rather than from the model.
 
-**2. Decide.** Every rule is JSON of the form `when ⇒ require` over twenty typed facts (see [engine/demo_policy.json](engine/demo_policy.json) and [engine/irs_pack.json](engine/irs_pack.json)). The company layer is GitLab's public [Global Travel and Expense Policy](https://handbook.gitlab.com/handbook/finance/expenses/), 30 rules; per-person and per-night limits compare `{"per": [fact, by]}`, which compiles to linear arithmetic. [engine/rules.py](engine/rules.py) compiles the packs once into Z3 formulas. For a case, the known facts are asserted as equalities and unknown facts are left free:
+**2. Decide.** Every rule is JSON of the form `when ⇒ require` over the typed facts in [engine/schema.py](engine/schema.py) (see [engine/demo_policy.json](engine/demo_policy.json) and [engine/irs_pack.json](engine/irs_pack.json)). The company layer is GitLab's public [Global Travel and Expense Policy](https://handbook.gitlab.com/handbook/finance/expenses/), 30 rules; per-person and per-night limits compare `{"per": [fact, by]}`, which compiles to linear arithmetic. [engine/rules.py](engine/rules.py) compiles the packs once into Z3 formulas. For a case, the known facts are asserted as equalities and unknown facts are left free:
 
 - If no assignment of the unknowns satisfies all rules, the verdict is **violation**. Each failing rule is re-checked with tracked assumptions and `core.minimize` so the unsat core names exactly the facts that decided it ("amount, pre_approved").
 - If every assignment satisfies all rules, the verdict is **compliant**, and the rules whose conditions held are listed as applied.
 - Otherwise the verdict is **undetermined**: it depends on something nobody knows yet.
 
-Facts the rules force (like which account a meal posts to) are derived by asking Z3 which values remain satisfiable, so the IRS coding comes out of the same proof.
+Facts the rules force (which account a meal posts to, and how much of it is deductible) are derived by asking Z3 which values remain satisfiable, so the IRS coding comes out of the same proof.
 
 **3. Resolve.** For a violation, the fix is the cheapest set of changes the person controls, found with `z3.Optimize` as soft constraints weighted by effort (changing the amount costs more than attaching a receipt). Open bounds are closed to whole cents, so "under $75" becomes $74.99, not "75 minus epsilon". When the fix is "get pre-approval" the case waits on the manager's Approvals page. For an undetermined case, each unknown yes/no fact is tried both ways; the ones whose answer changes the outcome become questions, sorted by how unsure the model was. Every answer or approval re-runs the whole proof; nothing is patched locally.
 
@@ -131,9 +132,17 @@ Every posted transaction, checked by the same rules as a new purchase. The summa
 
 ### Policy Studio: rules in plain English, proven consistent
 
-Type a policy sentence. Claude turns it into a `when ⇒ require` rule over the known facts, Z3 compiles it, checks it against the other 37 rules for conflicts and dead conditions, and shows the result before anything is saved. **Save & Activate** swaps the live policy; the next check proves against it. The page also proves the whole policy consistent: no rule that can never fire, no two rules that disagree on the same purchase (with a concrete example when they do).
+Type a policy sentence. Claude turns it into a `when ⇒ require` rule over the known facts, Z3 compiles it, checks it against every other rule for conflicts and dead conditions, and shows the result before anything is saved. **Save & Activate** swaps the live policy; the next check proves against it. The page also proves the whole policy consistent: no rule that can never fire, no two rules that disagree on the same purchase (with a concrete example when they do).
 
 ![Policy Studio](docs/screenshots/rules.png)
+
+### IRS checks, proven both ways
+
+Its own page, with its own switch. The statutory layer is thirteen rules from the Code and regulations, each carrying its citation: meals 50% deductible (§274(n)(1)) or 100% at a company-wide event (§274(e)(4)), entertainment 0% since the 2017 Act (§274(a)(1)), receipts at $75 (Reg. §1.274-5(c)(2)(iii)) and for any lodging, the 60-day accountable-plan safe harbor (Reg. §1.62-2(g)(2)(i)), commuting as a personal expense (Rev. Rul. 99-7), companion travel (§274(m)(3)), business gifts at $25 a recipient (§274(b)), and mileage at the 2026 standard rate of 72.5 cents (Notice 2026-10). The layer derives two facts nobody types: `coded_account` and `deductible`, shown on every case as its tax treatment.
+
+`GET /policy/irs` is a formal test suite run by the solver on every page load. For each rule Z3 (1) builds a purchase with the condition true and the requirement false while keeping every other rule as a soft constraint, and the engine must re-prove it as a violation of exactly that rule, with the unsat core naming the deciding facts; (2) builds a purchase with the condition true and every rule satisfied, which the engine must call compliant with the rule applied (a prohibition has none, and the page says so); (3) checks whether the company rules alone already force the IRS requirement, and if so names which ones from the minimized core (the $75 receipt rule is implied by the company's $50 one; the other twelve are caught only by this layer); (4) confirms no dead rule and no disagreeing pair. All of it runs in about a tenth of a second. Each rule also has a hand-written boundary pair in [engine/test_policy_packs.py](engine/test_policy_packs.py) ($74.99 against $75, 60 days against 61).
+
+**Switch off** removes the layer from the live policy: the same purchase gets the same company verdict with no account and no deductibility, and switching it back on restores the previous policy version. The page lists what is deliberately not encoded (lavish-or-extravagant, per diem, achievement awards, club dues) and links every source.
 
 ### What applies to you
 
@@ -224,7 +233,7 @@ Natural-language rule drafting on the Policy page shells out to the Claude Code 
 
 ```
 engine/      rules.py (Z3: check, fix, questions, audit), bank_rules.py (string theory),
-             schema.py (the twenty facts), demo_policy.json (GitLab's policy) + irs_pack.json (37 rules), keyword_baseline.py
+             schema.py (the typed facts), demo_policy.json (GitLab's policy) + irs_pack.json (13 cited IRS rules), keyword_baseline.py
 api/         FastAPI: routes_cases (check/answer/approve/authorize), routes_graph, routes_ledger,
              routes_policy (+ policy_nl.py), routes_bank, routes_eval, routes_employees; db.py (SQLite);
              jev_live.py (Typesafe client), try_text.py and bench_jev.py (CLIs)
@@ -241,7 +250,7 @@ API_CONTRACT.md   every route and shape; the OpenAPI schema at /openapi.json is 
 
 ## API
 
-Twenty-two routes, all JSON, no auth, open CORS. Interactive docs at `http://localhost:8000/docs`; the full contract with every shape is [API_CONTRACT.md](API_CONTRACT.md).
+Twenty-four routes, all JSON, no auth, open CORS. Interactive docs at `http://localhost:8000/docs`; the full contract with every shape is [API_CONTRACT.md](API_CONTRACT.md).
 
 | Route | What it does |
 | --- | --- |
@@ -253,6 +262,7 @@ Twenty-two routes, all JSON, no auth, open CORS. Interactive docs at `http://loc
 | `GET /cases/{id}/graph`, `POST …/graph/preview` | Facts → rules → verdict graph; preview with overridden facts |
 | `GET /ledger`, `POST /ledger/audit` | Ledger rows with verdicts; audit summary by verdict and rule |
 | `GET /policy`, `POST /policy/audit` | The rules and facts; dead rules and conflicting pairs |
+| `GET /policy/irs`, `POST /policy/layers` | The IRS layer's self-test: witnesses, cores, company entailment; switch the layer on or off |
 | `POST /policy/rules/draft`, `POST /policy/rules`, `DELETE /policy/rules/{id}` | Sentence → rule (not saved); save; remove |
 | `POST /bank-rules/check` | Shadowed and overlapping QuickBooks bank rules |
 | `GET /employees`, `POST /employees`, `GET /employees/{id}/rules` | Sign-in list; sign-up with worker fields; which rules can fire for this person, with days left |

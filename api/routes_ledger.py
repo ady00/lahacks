@@ -17,6 +17,12 @@ def ledger(company: str | None = None, verdict: str | None = None, limit: int = 
     return {"transactions": txns, "total": total}
 
 
+@router.post("/ledger/{txn_id}/answer", response_model=models.LedgerRow)
+def answer(txn_id: str, req: models.AnswerRequest):
+    with _LOCK, closing(db.connect()) as conn:
+        return L.answer(conn, txn_id, req.fact, req.value, cases.POLICY.version)
+
+
 @router.post("/ledger/audit", response_model=models.AuditSummary)
 def audit(req: models.AuditRequest):
     with _LOCK, closing(db.connect()) as conn:

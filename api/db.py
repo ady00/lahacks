@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS policy_versions(version TEXT PRIMARY KEY, rules_json 
 CREATE TABLE IF NOT EXISTS employees(employee_id TEXT PRIMARY KEY, name TEXT, role TEXT, manager_id TEXT,
   job_title TEXT DEFAULT '', department TEXT DEFAULT '', level TEXT DEFAULT '', location TEXT DEFAULT '', start_date TEXT DEFAULT '');
 CREATE TABLE IF NOT EXISTS rules(id TEXT PRIMARY KEY, rule_json TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS txn_answers(txn_id TEXT PRIMARY KEY, answers_json TEXT);
 """
 # Worker-shaped record (Workday's sample fields): title, department, level, location, start date. Tenure is derived.
 EMP_COLS = ["employee_id", "name", "role", "manager_id", "job_title", "department", "level", "location", "start_date"]
@@ -74,6 +75,17 @@ def put_case(conn, case: dict, answers: dict):
 def get_case(conn, case_id):
     r = conn.execute("SELECT case_json FROM cases WHERE case_id = ?", (case_id,)).fetchone()
     return json.loads(r[0]) if r else None
+
+
+def txn_answers(conn, txn_id) -> dict:
+    r = conn.execute("SELECT answers_json FROM txn_answers WHERE txn_id = ?", (txn_id,)).fetchone()
+    return json.loads(r[0]) if r else {}
+
+
+def put_txn_answers(conn, txn_id, answers: dict):
+    conn.execute("INSERT OR REPLACE INTO txn_answers VALUES (?,?)", (txn_id, json.dumps(answers)))
+    conn.execute("DELETE FROM verdicts WHERE txn_id = ?", (txn_id,))  # every cached verdict predates the answer
+    conn.commit()
 
 
 def get_answers(conn, case_id) -> dict:

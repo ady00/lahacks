@@ -37,6 +37,15 @@ export function CaseCard({ c }: { c: Case }) {
 
       <p className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3.5 text-sm transition-colors hover:border-[#CBD5E1]">{c.explanation}</p>
 
+      {(c.facts.coded_account || c.facts.deductible) && (
+        <a href="/irs" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[#CCFBF1] bg-[#F0FDFA] px-3.5 py-2.5 text-sm text-[#0F766E] transition-colors hover:border-[#5EEAD4]">
+          <span className="text-[11px] font-bold uppercase tracking-[0.06em]">Tax treatment</span>
+          {c.facts.coded_account && <span className="font-medium">{valueText("coded_account", c.facts.coded_account.value)}</span>}
+          {c.facts.deductible && <span className="font-medium">{`${c.facts.deductible.value} deductible`}</span>}
+          <span className="ml-auto text-xs text-[#0D9488]">derived by the IRS layer, not entered by anyone →</span>
+        </a>
+      )}
+
       {c.approval && (
         <div className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm shadow-2xs ${c.approval.approved ? "border-green-200 bg-green-50/80 text-green-800" : "border-red-200 bg-red-50/80 text-red-800"}`}>
           <span className={`inline-block size-2 rounded-full ${c.approval.approved ? "bg-green-600" : "bg-red-600"} animate-pulse`} />

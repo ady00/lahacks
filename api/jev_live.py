@@ -12,7 +12,10 @@ QUESTIONS = {  # the first three were tuned on api/bench_jev.py (45/45 kinds on 
     "expense_kind": {"type": "choice", "criteria": {
         "airfare": "An airline ticket or flight.",
         "train": "A train or rail ticket.",
-        "car_rental": "A rental car, or fuel for one.",
+        "car_rental": "A rental car booking.",
+        "fuel": "Gas, petrol or EV charging for a car.",
+        "entertainment": "Entertainment: tickets to a game, concert, show or theater, golf, a club or a bar outing where the activity, not a meal, is the point.",
+        "mileage": "Mileage for driving a personal car, claimed per mile.",
         "lodging": "A hotel, motel, Airbnb or other place to sleep.",
         "rideshare": "A ground ride: taxi, cab, Uber, Lyft, Waymo or similar.",
         "parking": "Parking, tolls or public transport fares.",
@@ -30,7 +33,10 @@ QUESTIONS = {  # the first three were tuned on api/bench_jev.py (45/45 kinds on 
         "shipping": "Postage, shipping, courier or customs fees.",
         "software": "A software license, SaaS plan, app subscription or VPN.",
         "swag": "Swag, merchandise, stickers or giveaways.",
-        "other": "Anything else: visas, permits, marketing spend, fees, business cards.",
+        "business_cards": "Business cards.",
+        "dry_cleaning": "Dry cleaning or laundry during a trip.",
+        "visa": "A travel visa, travel permit or Covid test.",
+        "other": "Anything else: marketing spend, fees.",
     }},
     "client_present": {"type": "noul", "instructions":
         "Answer yes if a client, customer, partner, prospect or investor joined the employee at this meal, event or entertainment: for example a dinner with a client's CFO, drinks with prospects, a game, concert or golf with a customer or a client's team. Answer no for travel, lodging or rides to visit a client, for purchases with only coworkers or the employee alone, for outings with a spouse, romantic partner, family or friends, and for goods, software or fees."},
@@ -40,6 +46,40 @@ QUESTIONS = {  # the first three were tuned on api/bench_jev.py (45/45 kinds on 
         "Answer yes if this expense was incurred while on a business trip away from home: during travel, at a conference, on a customer visit, at an offsite in another city. Answer no for purchases at home or in the employee's own city and for monthly services."},
     "government_present": {"type": "noul", "instructions":
         "Answer yes only if a government official, government employee or public-sector representative was among the people hosted at this meal or event. Answer no when no guests are mentioned or the guests are commercial clients, partners or coworkers."},
+    "companion_present": {"type": "noul", "instructions":
+        "Answer yes if a spouse, romantic partner, child or other family member traveled or stayed with the employee on this trip. Answer no when nobody else is mentioned or only coworkers or clients were along."},
+    "commuting": {"type": "noul", "instructions":
+        "Answer yes if this ride, parking or driving was between the employee's home and their regular office or workplace. Answer no for trips to an airport, a client, a conference, a different city or any one-off location."},
+    "travel_class": {"type": "choice", "criteria": {
+        "economy": "Economy, coach or standard class, or no seat class mentioned.",
+        "premium": "One class above economy: premium economy, economy plus, comfort plus; on a train, first or business class.",
+        "business": "Business class on a flight.",
+        "first": "First class on a flight.",
+    }},
+    "gift_occasion": {"type": "choice", "criteria": {
+        "life_event": "A team member's life event or a kind gesture: get well, condolences, new home, congratulations, or no occasion mentioned.",
+        "baby": "A new baby or a baby shower.",
+        "holiday": "A holiday or seasonal gift for the team.",
+        "host": "A thank-you gift for a friend or family member who hosted the employee instead of a hotel on a business trip.",
+    }},
+    "international": {"type": "noul", "instructions":
+        "Answer yes if the trip crosses a country border, for example a flight from the US to Europe or Asia. Answer no for domestic travel and when no destination is mentioned."},
+    "customer_trip": {"type": "noul", "instructions":
+        "Answer yes if the trip is to meet customers or prospects, to speak at an event, or to represent the company at a conference. Answer no for internal meetings, offsites and when no purpose is mentioned."},
+    "rental_car": {"type": "noul", "instructions": "Answer yes if the driving or fuel was for a rental car. Answer no otherwise."},
+    "mileage_and_fuel": {"type": "noul", "instructions":
+        "Answer yes only if the request claims both mileage and fuel or EV charging for the same trip. Answer no otherwise."},
+    "tip_over_20": {"type": "noul", "instructions":
+        "Answer yes only if a tip above 20 percent of the bill is included. Answer no when the tip is 20 percent or less or no tip is mentioned."},
+    "cash_equivalent": {"type": "noul", "instructions": "Answer yes if the purchase is cash, a gift card or a prepaid card. Answer no otherwise."},
+    "includes_fees": {"type": "noul", "instructions":
+        "Answer yes if an internet or phone bill includes setup, installation, a router, modem, phone or other hardware, change fees or insurance. Answer no for plain monthly service and for anything else."},
+    "whole_family_plan": {"type": "noul", "instructions":
+        "Answer yes if a phone claim covers a whole family plan rather than only the employee's own line. Answer no otherwise."},
+    "on_leave": {"type": "noul", "instructions":
+        "Answer yes if the employee says they are on leave (parental, medical, sabbatical or other leave). Answer no otherwise."},
+    "personal_travel": {"type": "noul", "instructions":
+        "Answer yes if the expense happened during personal travel or a vacation rather than a business trip. Answer no otherwise."},
 }
 
 
@@ -68,10 +108,12 @@ def extract_with_meta(text: str) -> tuple[dict, dict]:
     latency = round((time.perf_counter() - t0) * 1000)
     try:
         a = body["answers"]
-        facts = {n: {"p": float(a[n]["noul"])} for n, q in QUESTIONS.items() if q["type"] == "noul"}
-        kind = a["expense_kind"]
-        if kind["choice"] in FACTS["expense_kind"].values:
-            facts = {"expense_kind": {"value": kind["choice"], "p": float(kind["confidence"])}, **facts}
+        facts = {}
+        for n, q in QUESTIONS.items():
+            if q["type"] == "noul":
+                facts[n] = {"p": float(a[n]["noul"])}
+            elif a[n]["choice"] in FACTS[n].values:  # an unknown choice is dropped, not guessed
+                facts[n] = {"value": a[n]["choice"], "p": float(a[n]["confidence"])}
     except (KeyError, TypeError, ValueError):
         raise JevError("Jev response had an unexpected shape") from None
     return facts, {"model": body.get("model"), "latency_ms": latency, "usage": body.get("usage"),

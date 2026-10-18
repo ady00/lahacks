@@ -27,7 +27,19 @@ def test_ledger_audit_counts_and_caches(client):
     assert conn.execute("select count(*) from verdicts").fetchone()[0] == 3
     r = client.get("/ledger", params={"company": "demo", "verdict": "violation"})
     assert "x-stub" not in r.headers and r.json()["total"] == 1 and r.json()["transactions"][0]["txn_id"] == "t2"
-    assert client.get("/ledger", params={"limit": 1, "offset": 1}).json()["transactions"][0]["txn_id"] == "t2"
+    assert [t["txn_id"] for t in client.get("/ledger").json()["transactions"]] == ["t3", "t1", "t2"]  # newest first
+
+
+def test_answer_redecides_one_row(client):
+    _seed(db.connect())
+    client.post("/ledger/audit", json={"company": "demo"})
+    q = next(t for t in client.get("/ledger").json()["transactions"] if t["verdict"] == "undetermined")
+    fact, opts = q["case"]["questions"][0]["fact"], q["case"]["questions"][0]["options"]
+    val = opts[0] if opts else True
+    assert client.post(f"/ledger/{q['txn_id']}/answer", json={"fact": "nope", "value": True}).status_code == 422
+    assert client.post("/ledger/missing/answer", json={"fact": fact, "value": True}).status_code in (404, 422)
+    r = client.post(f"/ledger/{q['txn_id']}/answer", json={"fact": fact, "value": val}).json()
+    assert r["case"]["facts"][fact]["value"] == val and r["case"]["facts"][fact]["source"] == "user" and fact not in [x["fact"] for x in r["case"]["questions"]]
 
 
 def test_cache_and_changed_row_redecided_alone(client, monkeypatch):
@@ -58,7 +70,7 @@ def test_one_bad_row_does_not_abort(client, monkeypatch):
     monkeypatch.setattr(cases, "decide_transaction", boom)
     a = client.post("/ledger/audit", json={"company": "demo"}).json()
     assert a["n"] == 3 and a["by_verdict"]["undetermined"] == 2
-    row = client.get("/ledger", params={"verdict": "undetermined"}).json()["transactions"][0]
+    row = next(r for r in client.get("/ledger", params={"verdict": "undetermined"}).json()["transactions"] if r["txn_id"] == "t1")
     assert row["case"]["explanation"] == "Could not evaluate: bad row"
 
 
@@ -84,7 +96,7 @@ def test_unknown_facts_undetermined_unicode_and_repeat(client):
     assert a["by_verdict"] == {"compliant": 0, "violation": 0, "undetermined": 2} and a["n"] == 2
     assert client.post("/ledger/audit", json={"company": "demo"}).json()["by_verdict"] == a["by_verdict"]
     rows = client.get("/ledger").json()["transactions"]
-    assert rows[0]["memo"] == "CAFÉ ☕ 東京" and all(r["case"]["questions"] for r in rows)
+    assert rows[-1]["memo"] == "CAFÉ ☕ 東京"  # same timestamp: later insert first and all(r["case"]["questions"] for r in rows)
     assert client.post("/ledger/audit", json={"company": "nobody"}).json()["by_verdict"] == {
         "compliant": 0, "violation": 0, "undetermined": 0}
 

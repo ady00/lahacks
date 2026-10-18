@@ -65,7 +65,7 @@ CASES = [
 ]
 
 
-def run(questions=None, hi=0.85, lo=0.15, verbose=True):
+def run(questions=None, hi=0.7, lo=0.3, verbose=True):
     if questions is not None:
         jev_live.QUESTIONS = questions
     rows, lat = [], []

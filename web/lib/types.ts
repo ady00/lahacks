@@ -22,7 +22,14 @@ export type ApplicableRule = S["ApplicableRule"];
 export type BankRulesOut = S["BankRulesOut"];
 export type BankRule = S["BankRule"];
 export type Product = S["Product"];
+export type IrsReport = S["IrsReport"];
+export type IrsRule = S["IrsRule"];
+export type Witness = S["Witness"];
 
 // Not in the generated schema yet (POST /policy/rules/draft): a translated rule plus Z3's checks on it.
 export type Rule = { id: string; layer: string; text: string; when?: unknown; require?: unknown; custom?: boolean };
 export type RuleDraft = { rule: Rule; dead: boolean; conflicts: PolicyAudit["conflicts"] };
+
+// The numeric questions the engine can ask (api/explain.py); every other question is yes/no or an enum.
+export const NUMERIC = new Set(["amount", "attendees", "nights", "days", "days_before_travel", "segment_hours", "miles"]);
+export const DECIMAL = new Set(["amount", "segment_hours"]);

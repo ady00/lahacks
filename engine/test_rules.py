@@ -62,7 +62,7 @@ def test_reviewer_round_trip_every_kind_and_empty_policy():
         s = z3.Solver(); s.add(p.vars[n] == to_z3(n, v)); assert s.check() == z3.sat
         assert from_z3(n, s.model().eval(p.vars[n], model_completion=True)) == v
     assert z3.simplify(to_z3("amount", 0.1) == z3.Q(1, 10))
-    assert list(FACTS)[:4] == ["role", "expense_kind", "coded_account", "amount"] and list(FACTS)[-1] == "government_present"
+    assert list(FACTS)[:5] == ["role", "expense_kind", "coded_account", "deductible", "amount"] and list(FACTS)[-1] == "commuting"
 
 def _bites(p, rid, **facts):
     s = z3.Solver(); s.add(*p.dom, p.by_id[rid].formula)
@@ -95,7 +95,7 @@ def test_reviewer_raw_version_unicode_and_threads():
 # a $200 client dinner for two (over GitLab's $80 a head), miscoded as travel
 DINNER = dict(role="employee", expense_kind="meal", client_present=True, at_company_event=False, traveling=False,
               government_present=False, amount=200, attendees=2, hour=19, days_since_purchase=0, pre_approved=False,
-              coded_account="travel")
+              coded_account="travel", deductible="50%")
 P = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
 
 def test_dinner_breaks_two_rules_and_cites_facts():
@@ -230,7 +230,7 @@ def test_resolve_leaves_ambiguous_and_given_accounts_alone():
     assert P.resolve({}) == ({}, {})
 
 RIDE = dict(role="employee", expense_kind="rideshare", amount=180, hour=9, days_since_purchase=0, pre_approved=False,
-            receipt_attached=True, traveling=False, government_present=False)
+            receipt_attached=True, traveling=False, government_present=False, commuting=False)
 
 def test_question_is_asked_only_when_it_decides():
     assert P.questions(RIDE, {"round_trip": {"p": 0.4}}) == ["round_trip"]
@@ -369,7 +369,7 @@ def test_one_model_check_matches_per_rule_solver_reference():
     pick = {"amount": [5, 20, 48, 50, 50.01, 60, 61, 74.99, 75, 80, 81, 100, 101, 120, 121, 150, 151, 160, 161, 300, 301, 500, 501, 1500, 1501, 5000, 5001],
             "hour": [0, 5, 6, 12, 21, 22, 23], "days_since_purchase": [0, 1, 14, 15, 60, 61, 75, 90, 91],
             "days_before_travel": [0, 6, 7, 13, 14, 30], "tenure_days": [0, 30, 364, 365, 400],
-            "attendees": [1, 2, 3], "nights": [1, 2, 3], "days": [1, 2, 5, 6]}
+            "attendees": [1, 2, 3], "nights": [1, 2, 3], "days": [1, 2, 5, 6], "miles": [1, 10, 100]}
     CODE = {"meal": "meals_50", "airfare": "travel", "train": "travel", "car_rental": "travel", "lodging": "travel",
             "rideshare": "travel", "parking": "travel", "internet": "office", "phone": "office", "coworking": "office",
             "equipment": "office", "laptop": "office", "personal_device": "office", "office_supplies": "office",

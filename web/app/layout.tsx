@@ -19,6 +19,7 @@ const NAV = [
   ["Check", "/"],
   ["Ledger", "/ledger"],
   ["Rules", "/rules"],
+  ["IRS", "/irs"],
   ["Bank rules", "/bank-rules"],
   ["Evaluation", "/eval"],
 ] as const;
@@ -36,7 +37,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   }
   const user = await getUser();
   return (
-    <html lang="en" className={`${youngSerif.variable} ${literata.variable} ${inter.variable} h-full antialiased`}>
+    // suppressHydrationWarning: browser extensions (Cap) stamp attributes on <html> before React hydrates; one-element, attributes only.
+    <html lang="en" suppressHydrationWarning className={`${youngSerif.variable} ${literata.variable} ${inter.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans text-[14px]">
         <header className="bg-white shadow-[0_2px_3px_#00000033]">
           <nav className="mx-auto flex h-16 max-w-[1440px] items-center gap-4 px-6 sm:gap-8 sm:px-12">

@@ -1,5 +1,6 @@
 """Real case lifecycle: /check, /answer, /approve, /authorize, and decide_transaction for the ledger and eval."""
 import hashlib
+import concurrent.futures
 import json
 import logging
 import os
@@ -13,6 +14,7 @@ from fastapi import HTTPException
 
 import engine
 from api import db
+from api import infer
 from api import product as products
 from api.explain import MERCHANT_CATEGORY, explain, question
 from engine.keyword_baseline import CODED_FALLBACK, extract_stub, txn_row
@@ -23,13 +25,22 @@ log = logging.getLogger(__name__)
 LA = ZoneInfo("America/Los_Angeles")
 _PACKS = Path(engine.__file__).parent
 PACK_RULES = [r for p in ("demo_policy.json", "irs_pack.json") for r in json.loads((_PACKS / p).read_text())]
+IRS_ENABLED = True  # ponytail: in memory only; a restart turns the IRS layer back on
 POLICY = Policy(PACK_RULES)
+_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=4)  # the claude call runs beside Jev
 
 
-def reload_policy(custom: list[dict] = ()) -> Policy:
+def pack_rules() -> list[dict]:
+    """The shipped packs, minus the IRS layer while it is switched off."""
+    return [r for r in PACK_RULES if IRS_ENABLED or r["layer"] != "irs"]
+
+
+def reload_policy(custom: list[dict] = (), irs: bool | None = None) -> Policy:
     """Swap the live policy: packs first, then the dashboard's rules. Every route reads `cases.POLICY` at call time."""
-    global POLICY
-    POLICY = Policy(PACK_RULES + list(custom))
+    global POLICY, IRS_ENABLED
+    if irs is not None:
+        IRS_ENABLED = irs
+    POLICY = Policy(pack_rules() + list(custom))
     return POLICY
 
 
@@ -85,7 +96,7 @@ def coded_account_for(qb_category: str) -> str:
 
 # ---- parsing ----
 _NUM = r"(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*(k\b)?"
-_AMOUNT = re.compile(rf"\$\s*{_NUM}|\b{_NUM}\s*(?:dollars|bucks|usd)\b", re.I)  # "$48", "$1.2k", "48 bucks", "1,200 USD"
+_AMOUNT = re.compile(rf"\$\s*{_NUM}|\b{_NUM}\s*(?:dollars?|bucks|usd)\b", re.I)  # "$48", "$1.2k", "48 bucks", "200 dollar", "1,200 USD"
 
 
 def parse_amount(text: str) -> float | None:
@@ -95,6 +106,14 @@ def parse_amount(text: str) -> float | None:
     whole, cents, k = m.groups()[:3] if m.group(1) else m.groups()[3:]
     x = float(whole.replace(",", "") + "." + (cents or "0")) * (1000 if k else 1)
     return x or None
+
+
+_MILES = re.compile(r"\b(\d{1,5})\s*(?:miles?|mi)\b", re.I)
+
+
+def parse_miles(text: str) -> int | None:
+    m = _MILES.search(text or "")
+    return int(m.group(1)) or None if m else None
 
 
 def parse_ts(s: str | None) -> tuple[datetime, bool]:
@@ -139,11 +158,13 @@ def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=N
     for name, value in standing_facts(employee, ts.date()).items():
         put(name, value, "employee")
     for name, value in facts_from_probs(probs).items():
-        put(name, value, model_source)
+        put(name, value, probs[name].get("source", model_source))
     if amount is not None:
         put("amount", amount, amount_source)
     elif (a := parse_amount(text)) is not None:
         put("amount", a, "text")
+    if (m := parse_miles(text)) is not None:
+        put("miles", m, "text")
     if has_time:
         put("hour", ts.hour, "derived")
     put("days_since_purchase", max(0, (now_la() - ts).days), "derived")
@@ -156,7 +177,7 @@ def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=N
 def to_case(case_id, created_at, employee_id, text, decision, sources, probs, approval, authorization) -> dict:
     v = decision.verdict
     facts = {n: {"value": val, "source": sources.get(n, "rules"),
-                 "p": _p(probs.get(n)) if sources.get(n) in ("jev", "text") else None}
+                 "p": _p(probs.get(n)) if sources.get(n) in ("jev", "text", infer.SOURCE) else None}
              for n, val in decision.facts.items()}
     questions = [question(f, _p(probs.get(f))) for f in decision.questions]
     unknown = []
@@ -222,8 +243,17 @@ def new_case(conn, req) -> dict:
         model_text = f"{req.text}\n{products.describe(product)}"
         if amount is None and product.get("price"):
             amount, amount_source = validate_value("amount", product["price"]), "product"
+    guess = _POOL.submit(infer.infer if req.infer else (lambda _: {}), model_text)  # off unless the form's toggle is on
+    probs, source = _model_facts(model_text)
+    settled = facts_from_probs(probs)
+    for name, entry in guess.result().items():
+        if name == "amount":
+            if amount is None and parse_amount(req.text) is None:
+                amount, amount_source = entry["value"], infer.SOURCE
+        elif name not in settled:
+            probs[name] = entry
     return _prove(conn, "c_" + secrets.token_hex(4), created_at, req.employee_id, req.text, amount, timestamp,
-                  *_model_facts(model_text), None, product, amount_source)
+                  probs, source, None, product, amount_source)
 
 
 def _get(conn, case_id) -> dict:
@@ -292,10 +322,12 @@ def authorize(conn, case_id) -> dict:
 
 
 # ---- ledger / evaluation ----
-def decide_transaction(txn: dict, extraction: dict | None, pre_approved: bool, employee: dict | None) -> dict:
+def decide_transaction(txn: dict, extraction: dict | None, pre_approved: bool, employee: dict | None,
+                       answers: dict | None = None) -> dict:
     """One ledger row (raw CSV strings or a DB row) -> case dict. The ledger audit and eval/run.py both call this."""
     t = txn_row(txn)
-    probs = extraction or {}
+    # questions the stored extraction never asked (it predates some facts) fall back to the keyword reading, labeled "text"
+    probs = {**{n: {**e, "source": "text"} for n, e in extract_stub(t.get("memo") or "").items()}, **(extraction or {})}
     facts, sources = {}, {}
 
     def put(name, value, source):
@@ -309,7 +341,7 @@ def decide_transaction(txn: dict, extraction: dict | None, pre_approved: bool, e
     for name, value in standing_facts(employee, ts.date() if ts else None).items():
         put(name, value, "employee")
     for name, value in facts_from_probs(probs).items():
-        put(name, value, "jev")
+        put(name, value, probs[name].get("source", "jev"))
     put("amount", t["amount"], "ledger")  # <= 0 or missing: unknown, never an all-rules-violated proof
     if ts is not None:
         if has_time:
@@ -326,6 +358,8 @@ def decide_transaction(txn: dict, extraction: dict | None, pre_approved: bool, e
     put("coded_account", t.get("coded_account") or coded_account_for(t["qb_category"] or ""), "ledger")
     put("receipt_attached", t["receipt_attached"], "ledger")
     put("pre_approved", bool(pre_approved), "approvals")
+    for name, value in (answers or {}).items():  # answered on the ledger page: beats anything extracted
+        put(name, value, "user")
     decision = POLICY.decide(facts, probs)
     return to_case(t.get("txn_id") or "", t.get("timestamp") or "", t["employee_id"] or "", t.get("memo") or "",
                    decision, sources, probs, None, None)

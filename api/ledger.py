@@ -2,7 +2,10 @@
 import json
 import time
 
+from fastapi import HTTPException
+
 from api import cases, db
+from engine.schema import validate_value
 
 _FROM = "FROM transactions t JOIN verdicts v ON v.txn_id = t.txn_id AND v.policy_version = ?"
 
@@ -14,7 +17,8 @@ def row_case(conn, txn: dict, policy_version: str) -> dict:
     try:
         case = cases.decide_transaction(
             txn, json.loads(txn["extraction_json"]) if txn.get("extraction_json") else None,
-            db.txn_pre_approved(conn, txn["txn_id"]), db.employee(conn, txn["employee_id"]))
+            db.txn_pre_approved(conn, txn["txn_id"]), db.employee(conn, txn["employee_id"]),
+            db.txn_answers(conn, txn["txn_id"]))
     except Exception as e:  # ponytail: never let one bad row kill the audit
         case = {"case_id": "", "created_at": txn.get("timestamp") or "", "employee_id": txn.get("employee_id") or "",
                 "text": txn.get("memo") or "", "policy_version": policy_version, "verdict": "undetermined",
@@ -54,9 +58,27 @@ def rows(conn, company, verdict, limit, offset, policy_version) -> tuple[list[di
     _ensure(conn, company, policy_version)
     where, args = _scope(company, verdict)
     total = conn.execute(f"SELECT COUNT(*) {_FROM} WHERE 1=1{where}", (policy_version, *args)).fetchone()[0]
-    cur = conn.execute(f"SELECT t.*, v.verdict, v.case_json {_FROM} WHERE 1=1{where} ORDER BY t.rowid LIMIT ? OFFSET ?",
+    cur = conn.execute(f"SELECT t.*, v.verdict, v.case_json {_FROM} WHERE 1=1{where} ORDER BY t.timestamp DESC, t.rowid DESC LIMIT ? OFFSET ?",
                        (policy_version, *args, limit, offset))
     return [_row(r) for r in cur], total
+
+
+def answer(conn, txn_id, fact, value, policy_version) -> dict:
+    """Record one answer for a ledger row, re-decide it, and return the fresh row."""
+    if fact == "pre_approved":
+        raise HTTPException(422, "pre_approved is set only by an approval")
+    try:
+        value = validate_value(fact, value)
+    except KeyError:
+        raise HTTPException(422, f"unknown fact {fact}")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    if conn.execute("SELECT 1 FROM transactions WHERE txn_id = ?", (txn_id,)).fetchone() is None:
+        raise HTTPException(404, "unknown transaction")
+    db.put_txn_answers(conn, txn_id, {**db.txn_answers(conn, txn_id), fact: value})
+    _ensure(conn, None, policy_version)
+    r = conn.execute(f"SELECT t.*, v.verdict, v.case_json {_FROM} WHERE t.txn_id = ?", (policy_version, txn_id)).fetchone()
+    return _row(r)
 
 
 def audit(conn, company, policy, by_id) -> dict:

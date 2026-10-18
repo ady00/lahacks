@@ -8,7 +8,7 @@ P_RAW = json.load(open("engine/demo_policy.json")) + json.load(open("engine/irs_
 BASE = dict(role="employee", expense_kind="meal", client_present=False, at_company_event=False, traveling=True,
             government_present=False, round_trip=False, amount=20, hour=12, days_since_purchase=0, days_before_travel=30,
             tenure_days=400, attendees=1, nights=1, days=1, receipt_attached=True, pre_approved=True, approved_issue=True,
-            booked_via_navan=True, coded_account="meals_50")
+            booked_via_navan=True, coded_account="meals_50", deductible="50%", companion_present=False, commuting=False, miles=1)
 AIR = dict(BASE, expense_kind="airfare", coded_account="travel", pre_approved=False)
 LODGE = dict(BASE, expense_kind="lodging", coded_account="travel", pre_approved=False)
 RIDE = dict(BASE, expense_kind="rideshare", coded_account="travel", pre_approved=False)
@@ -25,7 +25,7 @@ CASES = [
   ("LODGE-300", dict(LODGE, amount=601, nights=2), dict(LODGE, amount=600, nights=2)),
   ("MEAL-when", dict(BASE, traveling=False), dict(BASE, traveling=False, client_present=True)),
   ("MEAL-120", dict(BASE, amount=241, days=2), dict(BASE, amount=240, days=2)),
-  ("MEAL-team-80", dict(BASE, at_company_event=True, coded_account="meals_100", amount=81), dict(BASE, at_company_event=True, coded_account="meals_100", amount=80)),
+  ("MEAL-team-80", dict(BASE, at_company_event=True, coded_account="meals_100", deductible="100%", amount=81), dict(BASE, at_company_event=True, coded_account="meals_100", deductible="100%", amount=80)),
   ("MEAL-client-80", dict(BASE, client_present=True, amount=161, attendees=2), dict(BASE, client_present=True, amount=160, attendees=2)),
   ("MEAL-gov", dict(BASE, client_present=True, government_present=True), dict(BASE, client_present=True)),
   ("RIDE-150", dict(RIDE, amount=151), dict(RIDE, amount=150)),
@@ -50,7 +50,14 @@ CASES = [
   ("SW-no", dict(NET, expense_kind="software"), dict(NET, expense_kind="equipment")),
   ("SWAG-no", dict(BOOK, expense_kind="swag"), dict(BOOK, expense_kind="other")),
   ("IRS-meal", dict(BASE, coded_account="meals_100"), dict(BASE)),
-  ("IRS-meal-event", dict(BASE, at_company_event=True), dict(BASE, at_company_event=True, coded_account="meals_100")),
+  ("IRS-meal", dict(BASE, deductible="100%"), dict(BASE)),
+  ("IRS-ent", dict(BASE, expense_kind="entertainment", coded_account="other"), dict(BASE, expense_kind="entertainment", coded_account="entertainment_0", deductible="0%")),
+  ("IRS-mileage", dict(AIR, expense_kind="mileage", miles=100, amount=72.51), dict(AIR, expense_kind="mileage", miles=100, amount=72.50)),
+  ("IRS-lodging-receipt", dict(LODGE, amount=40, days_since_purchase=1, receipt_attached=False), dict(LODGE, amount=40, days_since_purchase=1)),
+  ("IRS-companion", dict(AIR, companion_present=True, deductible="100%"), dict(AIR, companion_present=True, deductible="limited")),
+  ("IRS-commute", dict(RIDE, commuting=True), dict(RIDE)),
+  ("IRS-gift-25", dict(BOOK, expense_kind="gift", amount=51, attendees=2, deductible="100%"), dict(BOOK, expense_kind="gift", amount=50, attendees=2, deductible="100%")),
+  ("IRS-meal-event", dict(BASE, at_company_event=True), dict(BASE, at_company_event=True, coded_account="meals_100", deductible="100%")),
   ("IRS-travel", dict(LODGE, coded_account="other"), dict(LODGE)),
   ("IRS-office", dict(NET, expense_kind="equipment", coded_account="other"), dict(NET, expense_kind="equipment")),
   ("IRS-other", dict(BOOK, coded_account="travel"), dict(BOOK)),
@@ -70,7 +77,7 @@ def test_each_rule_bites_and_releases(rule_id, breaking, passing):
 
 
 def test_every_rule_has_a_case():
-    assert {c[0] for c in CASES} == set(P.by_id) and len(P.rules) == 37
+    assert {c[0] for c in CASES} == set(P.by_id) and len(P.rules) == 43
 
 
 def test_demo_policy_has_no_dead_rules_or_conflicts():
@@ -132,3 +139,35 @@ def test_per_unit_limit_asks_for_the_divisor_then_fixes_the_amount():
     d = P.decide(dict(BASE, client_present=True, amount=300, attendees=3), {})
     assert [v.rule for v in d.verdict.violations] == ["MEAL-client-80"]
     assert [(s.fact, s.to) for s in d.fix] == [("amount", 240.0)]
+
+
+def test_selftest_builds_a_breaking_and_a_holding_purchase_for_every_irs_rule():
+    from engine.schema import FACTS
+    out = P.selftest("irs")
+    assert [r["id"] for r in out] == [r.id for r in P.rules if r.layer == "irs"] and len(out) == 13
+    assert [r["id"] for r in out if r["prohibition"]] == ["IRS-commute"]
+    for r in out:
+        assert r["breaks"]["verdict"] == "violation" and r["id"] in r["breaks"]["violations"]
+        assert set(r["breaks"]["facts"]) == set(FACTS)
+        if r["prohibition"]:  # IRS-commute: when its condition holds the purchase is simply not allowed
+            assert r["holds"] is None
+        else:
+            assert r["holds"]["verdict"] == "compliant" and r["id"] in r["holds"]["applied"] and set(r["holds"]["facts"]) == set(FACTS)
+        assert set(r["facts_used"]) <= set(FACTS) and r["ms"] >= 0
+    json.dumps(out)  # plain Python all the way down
+
+
+def test_selftest_names_the_company_rules_that_already_imply_an_irs_rule():
+    by = {r["id"]: r for r in P.selftest("irs")}
+    assert by["IRS-receipt-75"]["implied_by"] == ["GEN-receipt"]   # $75+ after day 0 is inside "over $50 needs a receipt"
+    assert by["IRS-receipt-60"]["implied_by"] == []                # a $10 expense 61 days old: no company rule asks for a receipt
+    assert by["IRS-meal"]["implied_by"] == []
+    # the breaker for IRS-receipt-75 cannot avoid GEN-receipt; the one for IRS-meal trips nothing else
+    assert by["IRS-receipt-75"]["breaks"]["also"] == ["GEN-receipt"] and by["IRS-meal"]["breaks"]["also"] == []
+    assert by["IRS-meal"]["breaks"]["because"]["IRS-meal"]  # the unsat core names the deciding facts
+
+
+def test_irs_rules_carry_a_citation():
+    for r in P.rules:
+        if r.layer == "irs":
+            assert r.raw["cite"] and r.raw["url"].startswith("https://")

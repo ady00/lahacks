@@ -7,12 +7,13 @@ import type { Case } from "@/lib/types";
 // employee and redirects to the case, so a refresh never creates a second case. Without it, go home.
 export default async function CheckPage({ searchParams }: PageProps<"/check">) {
   const user = await requireUser();
-  const { text, amount } = await searchParams;
+  const { text, amount, infer } = await searchParams;
   if (typeof text !== "string" || text.trim() === "") redirect("/");
   const c = await post<Case>("/check", {
     text,
     employee_id: user.employee_id,
     amount: typeof amount === "string" && amount !== "" ? Number(amount) : undefined,
+    infer: infer === "1",
   });
   redirect(`/cases/${c.case_id}`);
 }

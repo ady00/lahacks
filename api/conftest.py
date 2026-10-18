@@ -17,7 +17,9 @@ def fake_extractor(monkeypatch):
     # the demo dinner's Jev output; no test ever calls a live model
     from api import cases
     monkeypatch.setattr(cases, "extract", lambda text: {"expense_kind": {"value": "meal", "p": 0.97},
-        "client_present": {"p": 0.91}, "at_company_event": {"p": 0.08}})
+        "client_present": {"p": 0.91}, "at_company_event": {"p": 0.08}, "traveling": {"p": 0.08}, "government_present": {"p": 0.05}})
+    from api import infer
+    monkeypatch.setattr(infer, "infer", lambda text: {})  # no test shells out to the claude CLI
 
 
 @pytest.fixture(scope="package", autouse=True)

@@ -1,15 +1,12 @@
 import { get } from "@/lib/api";
 import { requireUser } from "@/lib/session";
-import type { Case } from "@/lib/types";
+import { DECIMAL, NUMERIC, type Case } from "@/lib/types";
 import { CaseCard } from "@/components/CaseCard";
 import { PurchaseGraph } from "@/components/PurchaseGraph";
 import type { CaseGraph } from "@/lib/graph";
 import { headline, usd } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { btn, btnPrimary, input } from "@/lib/ui";
-
-// the numeric questions the engine can ask (api/explain.py); every other question is yes/no or an enum
-const NUMERIC = new Set(["amount", "attendees", "nights", "days", "days_before_travel"]);
 
 // Every button is a native form to /act/<verb>; the API re-proves and this page re-renders whatever it says.
 export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
@@ -35,7 +32,7 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
           <input type="hidden" name="fact" value={q.fact} />
           <label className="text-sm font-medium text-amber-950">
             {q.text}
-            <input name="value" type="number" step={q.fact === "amount" ? "0.01" : "1"} min={q.fact === "amount" ? "0.01" : q.fact === "days_before_travel" ? "0" : "1"} required className={`${input} mt-1.5`} />
+            <input name="value" type="number" step={DECIMAL.has(q.fact) ? "0.01" : "1"} min={DECIMAL.has(q.fact) ? "0.01" : q.fact === "days_before_travel" ? "0" : "1"} required className={`${input} mt-1.5`} />
           </label>
           <button className={btnPrimary}>Submit Answer</button>
         </form>

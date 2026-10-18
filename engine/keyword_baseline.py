@@ -5,13 +5,20 @@ from zoneinfo import ZoneInfo
 
 LA = ZoneInfo("America/Los_Angeles")
 
-CODED_FALLBACK = {"Meals": "meals_50", "Travel": "travel", "Office": "office", "Entertainment": "other"}
+CODED_FALLBACK = {"Meals": "meals_50", "Travel": "travel", "Office": "office", "Entertainment": "entertainment_0"}
 
 _KINDS = [  # first match wins, order is the contract
+    ("business_cards", r"business cards?|\bmoo\b"),
+    ("dry_cleaning", r"dry ?clean|laundry"),
+    ("gift", r"gift|flowers"),
+    ("entertainment", r"tickets?|concert|\bgame\b|golf|theat(er|re)|\bshow\b|bowling|karaoke|\bclub\b|box seats|suite at"),
+    ("visa", r"\bvisa\b|permit|covid test|pcr test"),
+    ("mileage", r"mileage|miles driven|drove \d+ ?mi"),
+    ("fuel", r"\bgas\b|fuel|petrol|ev charg|charging station|supercharg"),
     ("laptop", r"laptop|macbook"),
     ("phone", r"phone (bill|service|plan)|cell(ular)? (service|plan|bill)|mobile plan|verizon|t-mobile"),
-    ("personal_device", r"\bphone\b|iphone|ipad|tablet|smart ?watch|apple watch|smart speaker|smart tv|router|mesh|extender|treadmill|walking pad"),
     ("internet", r"internet|wifi|wi-fi|broadband|comcast"),
+    ("personal_device", r"\bphone\b|iphone|ipad|tablet|smart ?watch|apple watch|smart speaker|smart tv|router|mesh|extender|treadmill|walking pad"),
     ("coworking", r"cowork|co-work|wework|day pass|office space"),
     ("airfare", r"flight|airfare|airline|plane"),
     ("train", r"\btrain\b|amtrak|\brail\b|eurostar"),
@@ -20,7 +27,6 @@ _KINDS = [  # first match wins, order is the contract
     ("rideshare", r"uber|lyft|taxi|\bcab\b|waymo|\bride\b"),
     ("parking", r"parking|toll"),
     ("meal", r"dinner|lunch|breakfast|meal|restaurant|coffee|drinks|catering|pizza|snacks"),
-    ("gift", r"gift|flowers"),
     ("swag", r"swag|stickers|t-shirts|giveaway|merch"),
     ("shipping", r"shipping|postage|fedex|\bups\b|usps|courier|customs"),
     ("books", r"\bbooks?\b|e-book|audiobook|kindle"),
@@ -40,7 +46,30 @@ def extract_stub(text: str) -> dict[str, dict]:
         "at_company_event": {"p": 0.9 if re.search(r"offsite|all-hands|company event|team event|team outing|team dinner|team lunch|kickoff|holiday party|team building", text) else 0.1},
         "traveling": {"p": 0.9 if re.search(r"\btrip\b|travel|flight|hotel|airbnb|on-?site|visiting|conference|out of town", text) else 0.1},
         "government_present": {"p": 0.9 if re.search(r"government|federal|agency|official|public sector|city of|state of|\bdod\b", text) else 0.1},
+        "travel_class": {"value": next((c for c, rx in _CLASSES if re.search(rx, text)), "economy"), "p": 0.9},
+        "gift_occasion": {"value": next((c for c, rx in _OCCASIONS if re.search(rx, text)), "life_event"), "p": 0.9},
+        **{n: {"p": 0.9 if re.search(rx, text) else 0.1} for n, rx in _FLAGS.items()},
+        "tip_over_20": {"p": 0.9 if any(int(x) > 20 for x in re.findall(r"(\d+)\s*%\s*tip", text)) else 0.1},
     }
+
+
+_CLASSES = [("first", r"first class (flight|seat|ticket)|first class to"), ("business", r"business class"),
+            ("premium", r"premium|economy plus|comfort plus|first class (train|rail)")]
+_OCCASIONS = [("baby", r"baby|shower"), ("holiday", r"holiday|christmas|hanukkah|secret santa"),
+              ("host", r"\bhost|stayed with|staying with")]
+_FLAGS = {
+    "international": r"international|overseas|abroad|london|paris|berlin|tokyo|amsterdam|dublin|singapore|sydney",
+    "customer_trip": r"customer|client|prospect|speaking|speaker|keynote|conference|booth",
+    "rental_car": r"rental|hertz|avis|enterprise",
+    "mileage_and_fuel": r"mileage.*(gas|fuel|charg)|(gas|fuel|charg).*mileage",
+    "cash_equivalent": r"gift card|giftcard|\bcash\b|prepaid card",
+    "includes_fees": r"setup|set-up|installation|install fee|router|modem|activation|insurance|change fee",
+    "whole_family_plan": r"whole family plan|entire family plan|family plan for all|all lines",
+    "on_leave": r"on leave|parental leave|medical leave|sabbatical",
+    "personal_travel": r"personal trip|personal travel|vacation",
+    "companion_present": r"spouse|wife|husband|my partner|kids?\b|family|girlfriend|boyfriend",
+    "commuting": r"commut|home to (the )?office|office to home|from home to work|to work\b",
+}
 
 
 def txn_row(txn: dict) -> dict:

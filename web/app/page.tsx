@@ -13,6 +13,8 @@ const EXAMPLES = [
   "Datadog subscription for the team, $650 a month",
   "Team lunch at the offsite, $320 for 8 people",
   "iPad for customer demos https://www.amazon.com/dp/B09V3KXJPB",
+  "Lakers tickets with the Acme team, $340",
+  "Drove 120 miles to the client site, $95",
 ];
 
 // The home page is the purchase check: a native GET form to /check, which POSTs the API server-side and
@@ -33,7 +35,7 @@ export default async function Home() {
   return (
     <>
       <PageHeader
-        title={`Can I buy this, ${first}?`}
+        title={`Can you buy this, ${first}?`}
         text="Describe it in your own words or paste a product link. You get a proven answer: allowed, needs approval, or one more question."
       >
         <a href="/ledger" className={btn}>Open ledger</a>
@@ -81,6 +83,10 @@ export default async function Home() {
               <span className="font-semibold text-ink">$</span>
               <input name="amount" type="number" step="0.01" min="0.01" placeholder="from text" className="w-20 bg-transparent font-sans font-semibold text-ink placeholder:font-normal placeholder:text-[#94A3B8] focus:outline-none" />
             </span>
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-main bg-white px-2.5 py-1 transition-colors has-[:checked]:border-secondary" title="Off by default. When on, a fast Claude model infers the facts the description leaves open (kind, amount, who was there) before the rules run.">
+              <input name="infer" type="checkbox" value="1" className="accent-[var(--color-secondary,#4F46E5)]" />
+              <span className="font-medium text-[#64748B]">AI fills gaps</span>
+            </label>
           </div>
           <span className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-[0_2px_4px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.02]">
             <span className="relative flex size-2">
@@ -112,9 +118,9 @@ export default async function Home() {
           <div className="flex items-center gap-2 text-[12px]">
             <span className="rounded-md bg-ink px-3 py-1.5 font-semibold text-white">{`All (${rules.length})`}</span>
             {(["company", "irs"] as const).map((l) => (
-              <span key={l} className="rounded-md border border-[#E2E8F0] bg-white px-3 py-1.5 font-medium text-[#64748B]">
+              <a key={l} href={l === "irs" ? "/irs" : "/rules"} className="rounded-md border border-[#E2E8F0] bg-white px-3 py-1.5 font-medium text-[#64748B] transition-colors hover:border-[#CBD5E1] hover:text-ink">
                 {`${l === "irs" ? "IRS tax pack" : "Company"} (${rules.filter((r) => r.layer === l).length})`}
-              </span>
+              </a>
             ))}
           </div>
         </div>

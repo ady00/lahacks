@@ -4,6 +4,7 @@ import math
 import operator
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Literal, NamedTuple
 
@@ -378,6 +379,47 @@ class Policy:
                         conflicts.append({"a": a.id, "b": b.id, "example": self._facts_from_model(model)})
                 s.pop()
         return {"dead": dead, "conflicts": conflicts}
+
+    def selftest(self, layer: str) -> list[dict]:
+        return _locked(self._selftest, layer)
+
+    def _selftest(self, layer: str) -> list[dict]:
+        """Every rule of `layer`, each with a purchase Z3 built to break it and one built to satisfy it, both re-proved
+        by check(); plus the other layers' rules that already imply it (empty = only this layer catches it)."""
+        others = [r for r in self.rules if r.layer != layer]
+        out = []
+        for r, names in zip(self.rules, self.formula_names):
+            if r.layer != layer:
+                continue
+            t0 = time.perf_counter()
+            # a breaker that keeps as many other rules as possible (MaxSAT), so "also" lists only the unavoidable ones
+            o = z3.Optimize()
+            o.add(*self.dom, r.when, z3.Not(r.require))
+            for x in self.rules:
+                if x.id != r.id:
+                    o.add_soft(x.formula)
+            breaks = self._witness(r.id, o.model()) if o.check() == z3.sat else None
+            # a purchase the rule applies to and every rule accepts; a prohibition (require false) has none
+            s = z3.Solver()
+            s.add(*self.dom, self.all_formulas, r.when)
+            holds = self._witness(r.id, s.model()) if s.check() == z3.sat else None
+            c = z3.Solver()
+            c.set(unsat_core=True)
+            c.set("core.minimize", True)
+            c.add(*self.dom, r.when, z3.Not(r.require))
+            for o in others:
+                c.assert_and_track(o.formula, z3.Bool(f"rule_{o.id}"))
+            implied_by = sorted(str(b).removeprefix("rule_") for b in c.unsat_core()) if c.check() == z3.unsat else []
+            out.append({"id": r.id, "facts_used": sorted(names), "prohibition": r.raw["require"] is False,
+                        "breaks": breaks, "holds": holds, "implied_by": implied_by, "ms": round((time.perf_counter() - t0) * 1000, 2)})
+        return out
+
+    def _witness(self, rule_id: str, model: z3.ModelRef) -> dict:
+        facts = self._facts_from_model(model)
+        v = self._check(facts)
+        return {"facts": facts, "verdict": v.status, "violations": [x.rule for x in v.violations],
+                "because": {x.rule: x.because for x in v.violations}, "applied": list(v.applied),
+                "also": [x.rule for x in v.violations if x.rule != rule_id]}
 
     def disagreement(self, rule_a: dict, rule_b: dict) -> dict | None:
         return _locked(self._disagreement, rule_a, rule_b)

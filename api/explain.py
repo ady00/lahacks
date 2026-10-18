@@ -15,6 +15,26 @@ QUESTION_TEXT = {
     "nights": "How many nights?",
     "days": "How many days does this cover?",
     "days_before_travel": "How many days before the trip is this booked?",
+    "miles": "How many miles?",
+    "companion_present": "Did a spouse, partner or family member come along?",
+    "commuting": "Was this between home and your regular workplace?",
+    "travel_class": "Which class is the seat?",
+    "segment_hours": "How many hours is the shortest flight or train segment?",
+    "international": "Is this international travel?",
+    "customer_trip": "Is the trip to meet customers, speak or represent GitLab at a conference?",
+    "frequent_traveler": "Have you made 3 or more such long trips this quarter?",
+    "tall_traveler": "Are you over 6'5\" (2 m) tall?",
+    "car_above_intermediate": "Is the rental car above intermediate class?",
+    "rental_car": "Was this a rental car?",
+    "mileage_and_fuel": "Are you claiming both mileage and fuel for this trip?",
+    "tip_over_20": "Is the tip over 20% of the bill?",
+    "cash_equivalent": "Is this cash or a gift card?",
+    "gift_occasion": "What is the gift for?",
+    "includes_fees": "Does the bill include setup, hardware or insurance charges?",
+    "whole_family_plan": "Does this cover a whole family plan rather than your own line?",
+    "ap_approved": "Has AP Admin approved it?",
+    "on_leave": "Are you on leave?",
+    "personal_travel": "Is this during personal travel?",
 }
 
 MERCHANT_CATEGORY = {
@@ -38,6 +58,12 @@ MERCHANT_CATEGORY = {
     "shipping": "4215 Courier services",
     "software": "5734 Computer software",
     "swag": "5999 Miscellaneous retail",
+    "fuel": "5542 Automated fuel dispensers",
+    "entertainment": "7922 Theatrical producers and ticket agencies",
+    "mileage": "4789 Transportation services",
+    "business_cards": "2741 Printing and publishing",
+    "dry_cleaning": "7216 Dry cleaners",
+    "visa": "9399 Government services",
     "other": "5999 Miscellaneous retail",
 }
 
@@ -68,8 +94,20 @@ def phrase(fact: str, value) -> str:
         ("round_trip", True): "round trip",
         ("booked_via_navan", False): "booked outside Navan",
         ("approved_issue", False): "no approved issue",
+        ("companion_present", True): "spouse or family along",
+        ("companion_present", False): "no companion",
+        ("commuting", True): "commuting",
+        ("commuting", False): "not a commute",
+        ("international", True): "international", ("international", False): "domestic",
+        ("customer_trip", False): "no customer, speaking or conference purpose",
+        ("frequent_traveler", False): "not a frequent traveler", ("tall_traveler", False): "under 6'5\"",
+        ("tall_traveler", True): "over 6'5\"", ("car_above_intermediate", True): "above intermediate class",
+        ("rental_car", True): "rental car", ("mileage_and_fuel", True): "mileage and fuel both claimed",
+        ("tip_over_20", True): "tip over 20%", ("cash_equivalent", True): "cash or gift card",
+        ("includes_fees", True): "setup, hardware or insurance charges", ("whole_family_plan", True): "whole family plan",
+        ("ap_approved", False): "no AP approval", ("on_leave", True): "on leave", ("personal_travel", True): "personal travel",
     }
-    units = {"attendees": "people", "nights": "nights", "days": "days"}
+    units = {"attendees": "people", "nights": "nights", "days": "days", "miles": "miles"}
     try:
         if fact == "amount":
             return f"amount {_money(value)}"
@@ -77,6 +115,8 @@ def phrase(fact: str, value) -> str:
             return table[(fact, value)]
         if fact == "coded_account":
             return f"coded {value}"
+        if fact == "deductible":
+            return f"{value} deductible"
         if fact == "role":
             return f"role {value}"
         if fact == "expense_kind":
@@ -87,6 +127,12 @@ def phrase(fact: str, value) -> str:
             return f"{value} days ago"
         if fact == "tenure_days":
             return f"{value} days since start date"
+        if fact == "travel_class":
+            return f"{value} class"
+        if fact == "gift_occasion":
+            return f"{value.replace('_', ' ')} gift"
+        if fact == "segment_hours":
+            return f"{value}-hour segments"
         if fact == "days_before_travel":
             return f"booked {value} days ahead"
         if fact in units:
@@ -106,8 +152,19 @@ def fix_phrase(step) -> str:
         return "book it through Navan"
     if fact == "approved_issue" and to is True:
         return "get an approved issue"
+    if fact == "ap_approved" and to is True:
+        return "get AP Admin approval"
+    if fact == "travel_class":
+        return f"book {to} class"
+    false_fix = {"car_above_intermediate": "book an intermediate or smaller car", "tip_over_20": "keep the tip at or under 20%",
+                 "mileage_and_fuel": "claim either mileage or fuel, not both", "cash_equivalent": "give a gift instead of cash or a gift card",
+                 "includes_fees": "remove the setup, hardware and insurance charges", "whole_family_plan": "claim only your own line"}
+    if to is False and fact in false_fix:
+        return false_fix[fact]
     if fact == "coded_account":
         return f"code it as {to}"
+    if fact == "deductible":
+        return f"record it as {to} deductible"
     if fact == "amount":
         return f"keep it at or under {_money(to)}"
     return f"set {fact} to {to}"
@@ -128,5 +185,6 @@ def explain(decision, by_id: dict, unknown: list[str]) -> str:
     if v.status == "undetermined":
         first = (decision.questions or unknown or [None])[0]
         out.append("Depends on: " + (QUESTION_TEXT.get(first, f"What is {first}?") if first else "a fact we don't know yet."))
-    out += [f"Post it as {facts[f]} ({rid})." for f, rid in decision.derived.items()]
+    out += [f"{facts[f]} deductible ({rid})." if f == "deductible" else f"Post it as {facts[f]} ({rid})."
+            for f, rid in decision.derived.items()]
     return " ".join(out)
