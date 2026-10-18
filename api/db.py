@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS approvals(id INTEGER PRIMARY KEY AUTOINCREMENT, case_
   approved INTEGER, at TEXT);
 CREATE TABLE IF NOT EXISTS policy_versions(version TEXT PRIMARY KEY, rules_json TEXT, loaded_at TEXT);
 CREATE TABLE IF NOT EXISTS employees(employee_id TEXT PRIMARY KEY, name TEXT, role TEXT, manager_id TEXT);
+CREATE TABLE IF NOT EXISTS rules(id TEXT PRIMARY KEY, rule_json TEXT, created_at TEXT);
 """
 SEED_EMPLOYEES = [
     ("e_newhire", "Sam Lee", "employee", "e_manager"),
@@ -135,6 +136,22 @@ def put_verdict(conn, txn_id, policy_version, case: dict):
 
 def employee(conn, employee_id):
     return _one(conn, "SELECT * FROM employees WHERE employee_id = ?", (employee_id,))
+
+
+def custom_rules(conn) -> list[dict]:
+    """Rules added through the dashboard, oldest first; they load after the packs."""
+    return [json.loads(r["rule_json"]) for r in conn.execute("SELECT rule_json FROM rules ORDER BY rowid")]
+
+
+def put_rule(conn, rule: dict):
+    conn.execute("INSERT INTO rules VALUES (?,?,datetime('now'))", (rule["id"], json.dumps(rule)))
+    conn.commit()
+
+
+def delete_rule(conn, rule_id: str) -> bool:
+    n = conn.execute("DELETE FROM rules WHERE id=?", (rule_id,)).rowcount
+    conn.commit()
+    return n > 0
 
 
 def record_policy(conn, version, rules):

@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { get, post } from "@/lib/api";
 import type { AuditSummary, LedgerOut } from "@/lib/types";
-import { usd } from "@/lib/format";
+import { usd, when } from "@/lib/format";
 import { VerdictChip } from "@/components/VerdictChip";
-import { card, h1, muted } from "@/lib/ui";
+import { PageHeader } from "@/components/PageHeader";
+import { card, h2, muted } from "@/lib/ui";
+
+const HEAD = ["Transaction", "Vendor", "Memo", "Amount", "When", "QuickBooks category", "Coded account", "Verdict", "Rules broken"];
 
 export default async function LedgerPage() {
   const [{ transactions, total }, audit] = await Promise.all([
@@ -12,12 +15,13 @@ export default async function LedgerPage() {
   ]);
   return (
     <div className="space-y-6">
-      <h1 className={h1}>Ledger</h1>
-      <section className={card}>
-        <h2 className="mb-2 font-semibold">
-          Audit · {audit.n} transactions <span className={`text-sm font-normal ${muted}`}>({audit.elapsed_ms} ms)</span>
+      <PageHeader title="Ledger" text="Every posted transaction, checked against the same rules as a new purchase." />
+      <section className={`${card} p-7`}>
+        <h2 className={`mb-2 ${h2}`}>
+          {`Audit of ${audit.n} ${audit.n === 1 ? "transaction" : "transactions"}`}{" "}
+          <span className={`text-sm font-normal ${muted}`}>{`in ${audit.elapsed_ms} ms`}</span>
         </h2>
-        <div className="flex gap-4 text-sm">
+        <div className="flex flex-wrap gap-4 text-sm">
           {(["compliant", "violation", "undetermined"] as const).map((v) => (
             <span key={v} className="flex items-center gap-1.5">
               <VerdictChip verdict={v} /> {audit.by_verdict[v] ?? 0}
@@ -28,7 +32,8 @@ export default async function LedgerPage() {
           <ul className="mt-3 text-sm">
             {audit.by_rule.map((r) => (
               <li key={r.rule}>
-                <span className="font-bold">{r.rule}</span> — {r.text} — <span className={muted}>{r.count}</span>
+                <span className="font-mono text-xs font-semibold">{`Rule ${r.rule}`}</span> {r.text}{" "}
+                <span className={muted}>{`· broken ${r.count} ${r.count === 1 ? "time" : "times"}`}</span>
               </li>
             ))}
           </ul>
@@ -36,34 +41,36 @@ export default async function LedgerPage() {
       </section>
 
       {transactions.length === 0 ? (
-        <p className={muted}>No transactions loaded yet.</p>
+        <p className={muted}>No transactions loaded yet. They appear once the data files are loaded into the API.</p>
       ) : (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className={`${card} w-full text-sm`}>
           <thead className={`text-left ${muted}`}>
             <tr>
-              {["Txn", "Vendor", "Memo", "Amount", "Timestamp", "QB category", "Coded account", "Verdict", "Rules"].map((h) => (
-                <th key={h} className="py-1 pr-3 font-normal">{h}</th>
+              {HEAD.map((h) => (
+                <th key={h} className="px-3 py-2 font-normal first:pl-5">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {transactions.map((t) => (
-              <tr key={t.txn_id} className="border-t border-zinc-100 dark:border-zinc-800">
-                <td className="py-1 pr-3 font-mono">
+              <tr key={t.txn_id} className="border-t border-[#F1F5F9]">
+                <td className="px-3 py-2 first:pl-5 font-mono text-xs">
                   {t.case ? <Link href={`/cases/${t.case.case_id}`} className="underline">{t.txn_id}</Link> : t.txn_id}
                 </td>
-                <td className="py-1 pr-3">{t.vendor}</td>
-                <td className={`py-1 pr-3 ${muted}`}>{t.memo}</td>
-                <td className="py-1 pr-3">{usd(t.amount)}</td>
-                <td className={`py-1 pr-3 ${muted}`}>{t.timestamp}</td>
-                <td className="py-1 pr-3">{t.qb_category}</td>
-                <td className="py-1 pr-3 font-mono">{t.coded_account}</td>
-                <td className="py-1 pr-3"><VerdictChip verdict={t.verdict} /></td>
-                <td className="py-1 font-mono">{t.violations.join(", ")}</td>
+                <td className="px-3 py-2 first:pl-5">{t.vendor}</td>
+                <td className={`px-3 py-2 first:pl-5 ${muted}`}>{t.memo}</td>
+                <td className="px-3 py-2 first:pl-5 whitespace-nowrap tabular-nums">{usd(t.amount)}</td>
+                <td className={`px-3 py-2 first:pl-5 whitespace-nowrap ${muted}`}>{when(t.timestamp)}</td>
+                <td className="px-3 py-2 first:pl-5">{t.qb_category}</td>
+                <td className="px-3 py-2 first:pl-5 font-mono text-xs">{t.coded_account}</td>
+                <td className="px-3 py-2 first:pl-5"><VerdictChip verdict={t.verdict} /></td>
+                <td className="px-3 py-2 font-mono text-xs">{t.violations.length ? t.violations.join(", ") : <span className={muted}>none</span>}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <p className={`text-sm ${muted}`}>{`Showing ${transactions.length} of ${total}`}</p>
     </div>

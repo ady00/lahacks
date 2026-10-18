@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { get, post } from "@/lib/api";
+import { del, get, post } from "@/lib/api";
 import { COOKIE, cookieOptions, getUser, type User } from "@/lib/session";
 import type { Employee, EmployeeList } from "@/lib/types";
 
@@ -26,13 +26,22 @@ export async function POST(req: Request, ctx: RouteContext<"/act/[name]">) {
         role: manager ? "employee" : kind,
         manager_id: manager ? "" : "e_manager",
       });
-      return redirectTo(req, "/check", { employee_id: e.employee_id, name: e.name, manager });
+      return redirectTo(req, "/", { employee_id: e.employee_id, name: e.name, manager });
     }
     case "login": {
       const id = str(f, "employee_id");
       const row = (await get<EmployeeList>("/employees")).employees.find((e) => e.employee_id === id);
       if (!row) throw new Error(`unknown employee ${id}`);
-      return redirectTo(req, "/check", { employee_id: row.employee_id, name: row.name, manager: str(f, "manager") === "on" });
+      return redirectTo(req, "/", { employee_id: row.employee_id, name: row.name, manager: str(f, "manager") === "on" });
+    }
+    case "rule-add": {
+      // the draft's when/require come back exactly as the API drafted them, as JSON in hidden fields
+      await post("/policy/rules", { text: str(f, "text"), when: JSON.parse(str(f, "when")), require: JSON.parse(str(f, "require")) });
+      return redirectTo(req, "/rules");
+    }
+    case "rule-delete": {
+      await del(`/policy/rules/${encodeURIComponent(str(f, "rule_id"))}`);
+      return redirectTo(req, "/rules");
     }
     case "logout":
       return redirectTo(req, "/login", null);

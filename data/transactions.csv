@@ -1,0 +1,34 @@
+txn_id,company,employee_id,vendor,memo,amount,timestamp,qb_category,receipt_attached,receipt_date,source
+t_0001,demo,e_newhire,Blue Bottle Coffee,Coffee with the design team before standup,14.50,2026-09-28T08:45:00-07:00,Meals,1,2026-09-28,intuit
+t_0002,demo,e_newhire,Uber,Uber to the Acme office for the kickoff meeting,23.80,2026-09-29T09:10:00-07:00,Travel,1,2026-09-29,intuit
+t_0003,demo,e_intern,Sweetgreen,Lunch at the company all-hands offsite,16.25,2026-09-30T12:20:00-07:00,Meals,1,2026-09-30,intuit
+t_0004,demo,e_contractor,Lyft,Lyft from LAX to the client site,31.00,2026-10-01T10:05:00-07:00,Travel,1,2026-10-01,intuit
+t_0005,demo,e_newhire,Staples,Printer paper and pens for the office,22.40,2026-10-01T15:30:00-07:00,Other,1,2026-10-01,intuit
+t_0006,demo,e_newhire,Chipotle,Working lunch at my desk,12.90,2026-10-02T12:40:00-07:00,Meals,1,2026-10-02,intuit
+t_0007,demo,e_manager,Uber,Uber home after the late customer call,28.00,2026-10-02T20:15:00-07:00,Travel,1,2026-10-03,intuit
+t_0008,demo,e_intern,Uber,Uber to the company offsite in Malibu,19.00,2026-10-03T08:30:00-07:00,Travel,1,2026-10-03,intuit
+t_0009,demo,e_contractor,Zoom,Zoom Pro monthly seat for client calls,15.99,2026-10-03T09:00:00-07:00,Office,1,2026-10-03,intuit
+t_0010,demo,e_newhire,Amazon,USB-C charger for the work laptop,24.99,2026-10-05T11:15:00-07:00,Office,1,2026-10-06,intuit
+t_0011,demo,e_newhire,Philz Coffee,Coffee with a prospect from Northwind,9.75,2026-10-06T10:00:00-07:00,Meals,1,2026-10-06,intuit
+t_0012,demo,e_manager,Delta Air Lines,Flight to the Denver customer summit,412.00,2026-10-06T14:20:00-07:00,Travel,1,2026-10-06,intuit
+t_0013,demo,e_manager,Marriott,Two nights in Denver for the customer summit,289.00,2026-10-08T16:00:00-07:00,Travel,1,2026-10-10,intuit
+t_0014,demo,e_newhire,Figma,Figma professional seat for Q4,180.00,2026-10-07T09:30:00-07:00,Office,1,2026-10-07,intuit
+t_0015,demo,e_newhire,Apple,27-inch monitor for the new hire desk,599.00,2026-10-07T13:00:00-07:00,Office,1,2026-10-07,intuit
+t_0016,demo,e_contractor,LAZ Parking,Parking at the client office,18.00,2026-10-08T09:45:00-07:00,Other,1,2026-10-08,intuit
+t_0017,demo,e_intern,Office Depot,Whiteboard markers for the project room,8.40,2026-10-08T14:10:00-07:00,Other,1,2026-10-08,intuit
+t_0018,demo,e_newhire,Uber,Uber to the airport for the Phoenix trip,34.50,2026-10-09T06:40:00-07:00,Travel,1,2026-10-09,intuit
+t_0019,demo,e_manager,Panera Bread,Team lunch after the sprint review,33.00,2026-10-09T12:30:00-07:00,Meals,1,2026-10-09,intuit
+t_0020,demo,e_contractor,FedEx,Shipping the demo unit to the customer,27.30,2026-10-10T11:00:00-07:00,Other,1,2026-10-10,intuit
+t_0021,demo,e_newhire,Starbucks,Coffee on the way in,6.10,2026-10-12T08:20:00-07:00,Meals,1,2026-10-12,intuit
+t_0022,demo,e_manager,SaaStr,Conference registration for SaaStr Annual,1299.00,2026-10-12T10:00:00-07:00,Other,1,2026-10-12,intuit
+t_0023,demo,e_newhire,Nobu Los Angeles,Dinner at Nobu with Acme's CFO and their VP of Finance,212.00,2026-10-13T19:45:00-07:00,Meals,1,2026-10-13,intuit
+t_0024,demo,e_contractor,Shake Shack,Lunch between client meetings,18.75,2026-10-13T12:50:00-07:00,Meals,1,2026-10-13,intuit
+t_0025,demo,e_intern,Uber,Uber to the office in the rain,21.00,2026-10-14T08:50:00-07:00,Travel,1,2026-10-14,intuit
+t_0026,demo,e_newhire,The Standard Hotel,One night in downtown LA before the morning pitch,340.00,2026-10-14T17:00:00-07:00,Travel,1,2026-10-14,intuit
+t_0027,demo,e_manager,Adobe,Adobe Creative Cloud annual plan,659.88,2026-10-14T11:30:00-07:00,Office,1,2026-10-14,intuit
+t_0028,demo,e_newhire,DoorDash,Late dinner at the office finishing the deck,29.50,2026-10-14T23:40:00-07:00,Meals,1,2026-10-14,intuit
+t_0029,demo,e_newhire,Dave & Buster's,Team outing with games and drinks after the launch,140.00,2026-10-15T19:00:00-07:00,Entertainment,1,2026-10-15,intuit
+t_0030,demo,e_manager,Bestia,Dinner with the Acme team after the contract signing,96.00,2026-10-15T20:00:00-07:00,Travel,1,2026-10-15,intuit
+t_0031,demo,e_newhire,Uber,Uber from the hotel to the Phoenix plant and back,68.00,2026-09-20T07:30:00-07:00,Travel,0,,intuit
+t_0032,demo,e_newhire,Amazon,Amazon order,31.00,2026-10-15T16:00:00-07:00,Other,,,intuit
+t_0033,demo,e_manager,Square,Payment to vendor,25.00,2026-10-16T13:00:00-07:00,Other,,,intuit

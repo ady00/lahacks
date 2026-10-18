@@ -1,13 +1,10 @@
 import logging
-from functools import lru_cache
 from pathlib import Path
 
 from fastapi import APIRouter
 
-import engine
 from api import models, samples
 from api.samples import stub
-from engine.rules import load_policy
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -27,10 +24,9 @@ def eval_table():
     return stub(_EMPTY)
 
 
-@lru_cache(maxsize=1)
 def _policy_version() -> str:
-    d = Path(engine.__file__).parent  # packs don't change at runtime
-    return load_policy(d / "demo_policy.json", d / "irs_pack.json").version
+    from api import cases  # the live policy: rules added on the dashboard swap it at runtime
+    return cases.POLICY.version
 
 
 @router.get("/health", response_model=models.Health)

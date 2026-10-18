@@ -1,4 +1,4 @@
-"use client"; // Next requires error boundaries to be client components; the sole client file at this gate.
+"use client"; // Next requires error boundaries to be client components.
 
 import { useEffect } from "react";
 
@@ -8,11 +8,11 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
   useEffect(() => console.error(error), [error]);
   return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold">Something broke</h1>
-      <p className="text-sm">The API returned an error or is unreachable. See the banner above, or the server log.</p>
+      <h1 className="text-xl font-semibold">This page could not load</h1>
+      <p className="text-sm">The API returned an error or is not answering. If there is a red banner above, fix that first; otherwise check the server log.</p>
       {error.digest && <p className="font-mono text-xs text-zinc-500">{error.digest}</p>}
       <button onClick={() => retry()} className="rounded border px-3 py-1 text-sm">
-        Retry
+        Try again
       </button>
     </div>
   );

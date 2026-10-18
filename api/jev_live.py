@@ -8,26 +8,29 @@ from engine.schema import FACTS
 
 URL = "https://api.typesafe.ai/v1/systemone"
 
-QUESTIONS = {
+QUESTIONS = {  # wording tuned on api/bench_jev.py: 45/45 kinds, 0 confidently-wrong booleans at 0.85/0.15
     "expense_kind": {"type": "choice", "criteria": {
-        "meal": "Food or drink: a meal, dinner, lunch, coffee, catering.",
-        "rideshare": "A taxi, Uber, Lyft or other ride.",
+        "meal": "Food or drink: a meal, dinner, lunch, breakfast, coffee, drinks, snacks, cake, catering.",
+        "rideshare": "A ground ride: taxi, cab, Uber, Lyft, Waymo or similar.",
         "airfare": "An airline ticket or flight.",
         "hotel": "A hotel, lodging or Airbnb stay.",
-        "software": "A software license, SaaS or app subscription.",
-        "equipment": "Physical office or computer equipment such as a monitor, laptop or keyboard.",
-        "entertainment": "Tickets or leisure: a concert, game, show, event admission.",
-        "other": "Anything that fits none of the other kinds.",
+        "software": "A software license, SaaS plan, seat or app subscription.",
+        "equipment": "Physical computer or office equipment: monitor, laptop, charger, keyboard, webcam, desk.",
+        "entertainment": "Leisure or recreation: a concert, sports game, show, golf, escape room or similar outing.",
+        "other": "Anything else: conference or event registration, parking, shipping, fees, office supplies, books, paper.",
     }},
     "client_present": {"type": "noul", "instructions":
-        "Answer yes if a client, customer or prospect (for example a client's CFO) was present or hosted at this purchase."},
+        "Answer yes if a client, customer, prospect or investor joined the employee at this meal, event or entertainment: for example a dinner with a client's CFO, drinks with prospects, a game, concert or golf with a customer or a client's team. Answer no for travel, lodging or rides to visit a client, for purchases with only coworkers or the employee alone, and for goods, software or fees."},
     "at_company_event": {"type": "noul", "instructions":
-        "Answer yes if this was at a company-wide event such as an offsite, all-hands or team event."},
+        "Answer yes if this purchase was for a company-organized event for employees: an offsite, all-hands, kickoff, team outing or team event, holiday party. Answer no for client meetings, external conferences, ordinary business travel, and individual or routine purchases."},
 }
 
 
 class JevError(Exception):
     pass
+
+
+_CLIENT = httpx.Client(timeout=10.0)  # keep-alive: saves a TLS handshake (~15 ms) per call; thread-safe
 
 
 def extract_with_meta(text: str) -> tuple[dict, dict]:
@@ -36,8 +39,8 @@ def extract_with_meta(text: str) -> tuple[dict, dict]:
         raise RuntimeError("TYPESAFE_API_KEY not set")
     t0 = time.perf_counter()
     try:
-        r = httpx.post(URL, headers={"Authorization": f"Bearer {key}"}, timeout=10.0,
-                       json={"model": "jev-latest", "state": text, "questions": QUESTIONS})
+        r = _CLIENT.post(URL, headers={"Authorization": f"Bearer {key}"},
+                         json={"model": "jev-latest", "state": text, "questions": QUESTIONS})
         r.raise_for_status()
         body = r.json()
     except httpx.HTTPStatusError as e:

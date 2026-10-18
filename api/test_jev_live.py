@@ -13,7 +13,7 @@ OK = {"model": "jev-1.13.0", "usage": {"input_tokens": 1, "output_tokens": 2}, "
 
 def _post(monkeypatch, status=200, body=OK):
     monkeypatch.setenv("TYPESAFE_API_KEY", "k")
-    monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(status, json=body, request=httpx.Request("POST", "http://x")))
+    monkeypatch.setattr(jev_live._CLIENT, "post", lambda *a, **k: httpx.Response(status, json=body, request=httpx.Request("POST", "http://x")))
 
 
 def test_shape(monkeypatch):
@@ -60,17 +60,17 @@ def test_reviewer_key_read_at_call_time_and_never_in_error(monkeypatch):
     def boom(*a, **k):
         seen.update(k)
         raise httpx.ConnectError("down", request=httpx.Request("POST", jev_live.URL))
-    monkeypatch.setattr(httpx, "post", boom)
+    monkeypatch.setattr(jev_live._CLIENT, "post", boom)
     monkeypatch.setenv("TYPESAFE_API_KEY", "sk-reviewer-secret-123")
     with pytest.raises(jev_live.JevError) as e:
         jev_live.extract("x")
     assert "sk-reviewer" not in str(e.value) and e.value.__cause__ is None
-    assert seen["timeout"] == 10.0 and seen["headers"]["Authorization"] == "Bearer sk-reviewer-secret-123"
+    assert jev_live._CLIENT.timeout.read == 10.0 and seen["headers"]["Authorization"] == "Bearer sk-reviewer-secret-123"
 
 
 def test_reviewer_non_json_200(monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "k")
-    monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(200, text="<html>", request=httpx.Request("POST", "http://x")))
+    monkeypatch.setattr(jev_live._CLIENT, "post", lambda *a, **k: httpx.Response(200, text="<html>", request=httpx.Request("POST", "http://x")))
     with pytest.raises(jev_live.JevError):
         jev_live.extract("x")
 

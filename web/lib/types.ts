@@ -17,3 +17,7 @@ export type FixStep = S["FixStep"];
 export type Fact = S["Fact"];
 export type Employee = S["Employee"];
 export type EmployeeList = S["EmployeeList"];
+
+// Not in the generated schema yet (POST /policy/rules/draft): a translated rule plus Z3's checks on it.
+export type Rule = { id: string; layer: string; text: string; when?: unknown; require?: unknown; custom?: boolean };
+export type RuleDraft = { rule: Rule; dead: boolean; conflicts: PolicyAudit["conflicts"] };

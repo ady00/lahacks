@@ -130,12 +130,16 @@ export function PurchaseGraph({ initialGraph, awaitingApproval, children }: {
   const current = preview ?? initialGraph;
   const savedFacts = new Map(initialGraph?.nodes.filter((n): n is FactNode => n.kind === "fact").map(f => [f.name, f]));
   return <>
+    <fieldset disabled={previewMode} className={`${styles.saved} min-w-0 space-y-6`} aria-label="Saved purchase and real actions">
+      {previewMode && <p className="text-sm font-semibold">Buttons are paused while you explore a what-if below. Reset the preview to use them.</p>}
+      {children}
+    </fieldset>
     <section className={styles.panel} aria-label="Purchase explanation">
       <div className={styles.header}>
-        <div><h2 className="text-lg font-semibold">Why this purchase?</h2><p className={styles.subtitle}>Policy dependency graph with Z3 results</p></div>
+        <div><h2 className="text-lg font-semibold">Why the rules decided this</h2><p className={styles.subtitle}>Each fact on the left feeds the rules it touches; the rules decide the verdict on the right.</p></div>
         {initialGraph && !previewMode && <button type="button" className={styles.button} onClick={() => setPreviewMode(true)}>What if?</button>}
       </div>
-      {!initialGraph ? <div className={styles.error}>Graph analysis unavailable. The saved case and its actions remain available below. <button className={styles.button} onClick={() => router.refresh()}>Retry graph</button></div> : <>
+      {!initialGraph ? <p className={styles.subtitle}>The rule-by-rule graph is not available for this case. <button className={styles.button} onClick={() => router.refresh()}>Try again</button></p> : <>
         <p className={styles.subtitle}>Policy {initialGraph.policy_version} · Facts {initialGraph.base_facts_hash.slice(0, 10)}</p>
         {previewMode && <>
           <div className={styles.banner} role="status">
@@ -181,9 +185,5 @@ export function PurchaseGraph({ initialGraph, awaitingApproval, children }: {
         {current && <DependencyGraph key={`${current.facts_hash}:${current.preview}`} graph={current} />}
       </>}
     </section>
-    <fieldset disabled={previewMode} className={`${styles.saved} space-y-6`} aria-label="Saved purchase and real actions">
-      {previewMode && <p className="text-sm font-semibold">Saved purchase · Reset preview to use real actions</p>}
-      {children}
-    </fieldset>
   </>;
 }

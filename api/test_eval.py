@@ -42,15 +42,12 @@ def test_health_policy_version_and_stub_flag(client, tmp_path, monkeypatch):
     models.Health.model_validate(r.json())
 
 
-def test_reviewer_health_cached_once_and_cwd_independent(client, tmp_path, monkeypatch):
-    want = client.get("/health").json()["policy_version"]
-    calls = []
-    real = routes_eval.load_policy
-    monkeypatch.setattr(routes_eval, "load_policy", lambda *p: calls.append(p) or real(*p))
-    routes_eval._policy_version.cache_clear()
+def test_reviewer_health_tracks_live_policy_and_cwd_independent(client, tmp_path, monkeypatch):
+    from api import cases
+    want = cases.POLICY.version
     monkeypatch.chdir(tmp_path)
     vs = {client.get("/health").json()["policy_version"] for _ in range(3)}
-    assert vs == {want} and len(calls) == 1
+    assert vs == {want}
 
 
 def test_reviewer_health_stub_flips_back_when_file_removed(client, tmp_path, monkeypatch):

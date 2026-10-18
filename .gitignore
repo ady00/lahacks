@@ -13,3 +13,5 @@ data/*.tar.gz
 artifacts/
 analysis/plan_pages/
 analysis/plan_extracted.txt
+
+node_modules/

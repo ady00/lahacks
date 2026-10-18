@@ -1,26 +1,29 @@
 @import "tailwindcss";
 
+/* ponytail: light only (the dark: utilities stay inert until someone adds a .dark toggle). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* The "Optimistic unity" Paper file's tokens: --main (hairline), --secondary (accent), Young Serif wordmark. */
+@theme {
+  --color-main: #dddddd;
+  --color-secondary: #9149c4;
+  --color-ink: #0f172a;
+  --color-paper: #f9f8f6;
+  --font-display: var(--font-young-serif), serif;
+  --font-serif: var(--font-literata), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: "Courier New", Courier, monospace;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-ink);
+  background:
+    linear-gradient(rgba(180, 170, 155, 0.08) 1px, transparent 1px) 0 0 / 6px 6px,
+    linear-gradient(90deg, rgba(180, 170, 155, 0.08) 1px, transparent 1px) 0 0 / 6px 6px,
+    radial-gradient(circle, rgba(160, 150, 135, 0.09) 0.8px, transparent 0.8px) 0 0 / 12px 12px,
+    var(--color-paper);
 }

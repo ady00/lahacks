@@ -13,6 +13,6 @@ def test_parse_amount(text, want):
 
 def test_question_and_explanation_name_same_fact():
     P = load_policy(try_text.ENGINE / "demo_policy.json", try_text.ENGINE / "irs_pack.json")
-    r = try_text.run(P, "Team dinner tonight", "e_newhire", None, None, True)
+    r = try_text.run(P, "Team dinner tonight", "e_newhire", None, "2026-10-17T12:00:00-07:00", True)  # noon: rules 6.1/6.2 must not fire
     assert r["verdict"] == "undetermined" and r["questions"][0]["fact"] == "amount"
     assert r["questions"][0]["text"] in r["explanation"]

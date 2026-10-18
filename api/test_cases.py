@@ -66,6 +66,9 @@ def test_parse_amount():
     assert cases.parse_amount("Laptop $1,299.00 from Best Buy") == 1299.0
     assert cases.parse_amount("about $48.") == 48.0 and cases.parse_amount("$ 12.5 tip") == 12.5
     assert cases.parse_amount("$0 refund") is None and cases.parse_amount("no price") is None
+    assert cases.parse_amount("$1.2k for a laptop") == 1200.0 and cases.parse_amount("about 48 bucks") == 48.0
+    assert cases.parse_amount("1,200 USD registration") == 1200.0 and cases.parse_amount("3 clients to dinner for $320") == 320.0
+    assert cases.parse_amount("$48 kombucha") == 48.0 and cases.parse_amount("2 tickets") is None
 
 
 def test_answer_coerces_numbers(client):

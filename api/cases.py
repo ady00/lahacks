@@ -15,13 +15,21 @@ import engine
 from api import db
 from api.explain import MERCHANT_CATEGORY, explain, question
 from engine.keyword_baseline import CODED_FALLBACK, extract_stub, txn_row
-from engine.rules import _p, facts_from_probs, load_policy
+from engine.rules import Policy, _p, facts_from_probs
 from engine.schema import FACTS, validate_value
 
 log = logging.getLogger(__name__)
 LA = ZoneInfo("America/Los_Angeles")
 _PACKS = Path(engine.__file__).parent
-POLICY = load_policy(_PACKS / "demo_policy.json", _PACKS / "irs_pack.json")
+PACK_RULES = [r for p in ("demo_policy.json", "irs_pack.json") for r in json.loads((_PACKS / p).read_text())]
+POLICY = Policy(PACK_RULES)
+
+
+def reload_policy(custom: list[dict] = ()) -> Policy:
+    """Swap the live policy: packs first, then the dashboard's rules. Every route reads `cases.POLICY` at call time."""
+    global POLICY
+    POLICY = Policy(PACK_RULES + list(custom))
+    return POLICY
 
 
 def now_la() -> datetime:
@@ -75,14 +83,16 @@ def coded_account_for(qb_category: str) -> str:
 
 
 # ---- parsing ----
-_AMOUNT = re.compile(r"\$\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?")
+_NUM = r"(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*(k\b)?"
+_AMOUNT = re.compile(rf"\$\s*{_NUM}|\b{_NUM}\s*(?:dollars|bucks|usd)\b", re.I)  # "$48", "$1.2k", "48 bucks", "1,200 USD"
 
 
 def parse_amount(text: str) -> float | None:
     m = _AMOUNT.search(text or "")
     if not m:
         return None
-    x = float(m.group(1).replace(",", "") + "." + (m.group(2) or "0"))
+    whole, cents, k = m.groups()[:3] if m.group(1) else m.groups()[3:]
+    x = float(whole.replace(",", "") + "." + (cents or "0")) * (1000 if k else 1)
     return x or None
 
 

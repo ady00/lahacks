@@ -172,6 +172,22 @@ class PolicyAudit(_M):
     conflicts: list[Conflict]
 
 
+class RuleText(_M):
+    text: str = Field(min_length=3)
+
+
+class RuleIn(_M):
+    text: str = Field(min_length=3)
+    when: object
+    require: object
+
+
+class RuleDraft(_M):
+    rule: dict          # {id, layer, text, when, require, custom}: post it back to POST /policy/rules as-is
+    dead: bool          # the rule's condition can never hold
+    conflicts: list[Conflict]  # only pairs that involve the draft
+
+
 class Shadowed(_M):
     rule: str
     by: list[str]

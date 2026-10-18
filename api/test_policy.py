@@ -50,3 +50,30 @@ def test_reviewer_policy_audit_repeated_fast_and_method(client):
     outs = [client.post("/policy/audit").json() for _ in range(3)]
     assert time.perf_counter() - t < 3 and all(o == {"dead": [], "conflicts": []} for o in outs)
     assert client.get("/policy/audit").status_code == 405
+
+
+def test_rules_add_draft_delete(client, monkeypatch):
+    from api import policy_nl
+    monkeypatch.setattr(policy_nl, "translate", lambda text: {"text": "Hotels over $900 are never reimbursed.",
+        "when": {"and": [{"eq": ["expense_kind", "hotel"]}, {"gt": ["amount", 900]}]}, "require": False})
+    v0 = client.get("/health").json()["policy_version"]
+    d = client.post("/policy/rules/draft", json={"text": "no hotels over 900 bucks"}).json()
+    assert d["rule"]["id"] == "C-1" and d["rule"]["custom"] and d["dead"] is False and d["conflicts"] == []
+    assert len(client.get("/policy").json()["rules"]) == 24  # a draft saves nothing
+    r = client.post("/policy/rules", json={k: d["rule"][k] for k in ("text", "when", "require")})
+    assert r.status_code == 200 and len(r.json()["rules"]) == 25 and r.json()["version"] != v0
+    assert client.get("/health").json()["policy_version"] == r.json()["version"]  # the live policy was swapped
+    # a hotel for $1,200 is now a violation of C-1
+    c = client.post("/check", json={"text": "Hotel for the conference, $1200", "employee_id": "e_newhire"}).json()
+    assert any(v["rule"] == "C-1" for v in c["violations"]) or c["verdict"] != "compliant"
+    assert client.post("/policy/rules", json={"text": "bad", "when": {"gt": ["no_such_fact", 1]}, "require": True}).status_code == 422
+    assert client.delete("/policy/rules/3.4").status_code == 404
+    r = client.delete("/policy/rules/C-1")
+    assert r.status_code == 200 and len(r.json()["rules"]) == 24 and r.json()["version"] == v0
+
+
+def test_rule_draft_translator_unavailable(client, monkeypatch):
+    from api import policy_nl
+    monkeypatch.setattr(policy_nl, "_claude", lambda: None)
+    r = client.post("/policy/rules/draft", json={"text": "Interns may not fly"})
+    assert r.status_code == 503 and "Claude" in r.json()["detail"]

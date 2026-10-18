@@ -6,12 +6,12 @@ python -m api.try_text "Client dinner with Acme's CFO, about $48" [--employee e_
 import argparse
 import json
 import os
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
 
 from api import jev_live
+from api.cases import parse_amount
 from api.explain import explain, question
 from engine.keyword_baseline import LA, extract_stub
 from engine.rules import facts_from_probs, load_policy
@@ -40,12 +40,6 @@ def load_env(path: Path) -> None:
         k, sep, v = line.strip().partition("=")
         if sep and not k.startswith("#") and k.strip():
             os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
-
-
-def parse_amount(text: str) -> float | None:
-    m = re.search(r"\$\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?", text)
-    amount = float(m.group(1).replace(",", "") + ("." + m.group(2) if m.group(2) else "")) if m else None
-    return amount if amount else None
 
 
 def run(P, text, employee, amount, timestamp, local):

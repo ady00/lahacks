@@ -8,13 +8,13 @@ LA = ZoneInfo("America/Los_Angeles")
 CODED_FALLBACK = {"Meals": "meals_50", "Travel": "travel", "Office": "office", "Entertainment": "entertainment_0"}
 
 _KINDS = [  # first match wins, order is the contract
-    ("meal", r"dinner|lunch|meal|restaurant|coffee"),
-    ("rideshare", r"uber|lyft|taxi|ride"),
-    ("airfare", r"flight|airfare|airline"),
+    ("meal", r"dinner|lunch|breakfast|meal|restaurant|coffee|drinks|catering|pizza|snacks"),
+    ("rideshare", r"uber|lyft|taxi|cab|waymo|ride"),
+    ("airfare", r"flight|airfare|airline|plane"),
     ("hotel", r"hotel|lodging|airbnb"),
-    ("software", r"subscription|saas|license|software"),
-    ("equipment", r"laptop|monitor|keyboard|equipment"),
-    ("entertainment", r"tickets|concert|game|show"),
+    ("software", r"subscription|saas|license|software|seat|plan"),
+    ("equipment", r"laptop|monitor|keyboard|webcam|charger|desk|equipment"),
+    ("entertainment", r"tickets|concert|game|show|golf|outing"),
 ]
 
 
@@ -23,8 +23,8 @@ def extract_stub(text: str) -> dict[str, dict]:
     kind = next((k for k, rx in _KINDS if re.search(rx, text)), None)
     return {
         "expense_kind": {"value": kind or "other", "p": 0.9 if kind else 0.5},
-        "client_present": {"p": 0.9 if re.search(r"client|customer|cfo|ceo|prospect", text) else 0.5},
-        "at_company_event": {"p": 0.9 if re.search(r"offsite|all-hands|company event|team event", text) else 0.1},
+        "client_present": {"p": 0.9 if re.search(r"client|customer|cfo|ceo|prospect|investor", text) else 0.5},
+        "at_company_event": {"p": 0.9 if re.search(r"offsite|all-hands|company event|team event|team outing|kickoff|holiday party", text) else 0.1},
     }
 
 

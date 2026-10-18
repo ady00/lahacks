@@ -1,0 +1,5 @@
+employee_id,name,role,manager_id
+e_newhire,Sam Lee,employee,e_manager
+e_intern,Ria Patel,intern,e_manager
+e_contractor,Jo Kim,contractor,e_manager
+e_manager,Dana Ortiz,employee,

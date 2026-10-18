@@ -1,0 +1,12 @@
+{
+  "name": "photon-approvals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node approve.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "spectrum-ts": "^12.11.0"
+  }
+}

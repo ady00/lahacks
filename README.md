@@ -1,229 +1,267 @@
-# Jev-Z3: Natural Language Accounting Rule Classifier to Z3 Logical Proofs
+# apriori · Proof of Purchase
 
-A formal verification pipeline that translates natural language expense policies, procurement controls, and QuickBooks accounting rules into typed logical parameters, then proves transaction compliance, policy consistency, and ledger balancing using the **Z3 SMT Solver**.
+**Ask "can I buy this?" in plain English and get an answer that is proven, not guessed.**
 
-Person B's versioned data loader, policy scenarios, and offline benchmark services are documented in [docs/backend.md](docs/backend.md). Start with `purchase-backend build` and `purchase-backend evaluate` after `pip install -e '.[dev]'`.
+A new hire types *"Client dinner Thursday with Acme's CFO, about $48."* A small typed model reads that sentence into facts. The [Z3 SMT solver](https://github.com/Z3Prover/z3) checks those facts against every company and IRS rule at once and returns one of three verdicts: **allowed**, **not allowed** (with the exact rules broken and the cheapest fix), or **needs one more detail** (with the single question that decides it). A manager approves on the dashboard, a mock card authorization is issued for exactly that amount with a hash of the proof, and the purchase lands in a QuickBooks-shaped ledger that the same rules audit in full.
 
----
+Built at LA Hacks 2026 for the Intuit QuickBooks track. Z3 makes every decision; models only read messy text into facts.
 
-## 💡 The Core Problem
-
-Traditional generative AI models (like GPT-4 or Claude) hallucinate when tasked with enforcing financial compliance rules and complex accounting logic. In high-stakes financial operations:
-- A single undetected policy breach can cause regulatory fines or unauthorized spend.
-- Conflicting corporate policies create ambiguous loopholes.
-- Splitting purchases across multiple transactions circumvents single-transaction limits.
-
-**Jev-Z3** solves this by pairing two complementary paradigms:
-1. **Jev (TypeSafe AI's System One Model):** A zero-shot, ultra-fast classification engine that evaluates natural language state against strictly typed questions (`choice`, `noul`, `score`) to extract calibrated parameters without generating free-form text.
-2. **Z3 SMT Solver (Microsoft Research):** A formal theorem prover that mathematically verifies first-order logic assertions over transactions, detecting counterexamples, proving compliance certificates, and identifying policy contradictions.
-
-```
-                          ┌───────────────────────────┐
-                          │   Natural Language Rule   │
-                          │   or QuickBooks Policy    │
-                          └─────────────┬─────────────┘
-                                        │
-                                        ▼
-             ┌─────────────────────────────────────────────────────┐
-             │       Jev 'System One' Decision Engine              │
-             │   - Choice: Domain, Scope, Category, Operator       │
-             │   - Noul: Receipt, VP Approval, PO, W-9, Audit      │
-             │   - Numeric Threshold Extraction & Normalization    │
-             └──────────────────────────┬──────────────────────────┘
-                                        │
-                                        ▼
-             ┌─────────────────────────────────────────────────────┐
-             │          Typed Z3RuleParameters Model               │
-             │  Antecedent A(T)  ==>  Obligation Consequent C(T)   │
-             └──────────────────────────┬──────────────────────────┘
-                                        │
-                        ┌───────────────┴───────────────┐
-                        ▼                               ▼
-       ┌─────────────────────────────────┐   ┌────────────────────────────────┐
-       │   Z3 Transaction Prover         │   │   QuickBooks & Anti-Split      │
-       │   - Proof of Compliance (UNSAT) │   │   - Double-entry theorem       │
-       │   - Counterexample (SAT)        │   │   - Evasion detection          │
-       │   - Policy Conflict Detection   │   │   - Class tracking check       │
-       └─────────────────────────────────┘   └────────────────────────────────┘
-```
+![Check page](docs/screenshots/check.png)
 
 ---
 
-## 🚀 Features
+## Contents
 
-- **Jev System One Classification:** Typed multi-question battery (`choice`, `noul`) extracting spend category, aggregation scope, approval roles, and mathematical operators.
-- **Dual Inference Engine:** Seamlessly connects to TypeSafe's live cloud API when `TYPESAFE_API_KEY` is present, with an integrated local calibrated engine for offline and testing use.
-- **Z3 First-Order Compliance Proofs:** Translates policy parameters into SMT logic:
-  $$\forall T, \quad A(T) \implies C(T) \iff \neg(A(T) \land \neg C(T)) \text{ is UNSAT}$$
-- **Counterexample Generation:** Pinpoints the exact predicate that failed when an expense violates policy (e.g. `amount = 650.0 > 500.0, approved_by_vp = False`).
-- **Policy Inconsistency Detection:** Formally proves whether two corporate policies are mutually contradictory or satisfiable in their trigger intersection.
-- **Anti-Split Structuring Proof:** Uses Z3 subset-sum constraint solving to catch employees who split single large purchases into multiple smaller expenses to evade approval limits.
-- **QuickBooks Double-Entry Ledger Verification:** Proves the fundamental accounting theorem $\sum \text{Debits} = \sum \text{Credits}$ and verifies mandatory GL class tracking.
-
----
-
-## 🛠️ Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/lahacks.git
-cd lahacks
-
-# Create virtual environment and activate
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install z3-solver pydantic httpx pytest
-```
+- [How it works](#how-it-works)
+- [Features](#features)
+- [Why not an LLM, RAG, or if/else?](#why-not-an-llm-rag-or-ifelse)
+- [Run it](#run-it)
+- [Repo layout](#repo-layout)
+- [API](#api)
+- [Data and known limits](#data-and-known-limits)
 
 ---
 
-## ⚡ Quickstart CLI
+## How it works
 
-Run the full interactive demonstration:
+One FastAPI server holds all of the logic. The Next.js dashboard, the text-message approver, and the CLI are thin clients of it, so they can never disagree.
+
+```
+  "Client dinner Thursday with Acme's CFO, about $48."
+                        │
+                        ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │ 1. READ                                                      │
+  │   Jev (Typesafe System One)    →  expense_kind = meal  p=1.00│
+  │   one typed question per fact      client_present   p=0.98   │
+  │                                    at_company_event p=0.03   │
+  │   regex / form / records       →  amount = 48, hour = 19,    │
+  │                                    role = employee, ...      │
+  └──────────────────────────────┬───────────────────────────────┘
+                                 ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │ 2. DECIDE  (Z3)                                              │
+  │   24 rules, each  when(facts) ⇒ require(facts)               │
+  │   • unknown facts stay free variables                        │
+  │   • violation  → every broken rule + its unsat core          │
+  │   • compliant  → the rules that applied and held             │
+  │   • undetermined → the yes/no fact whose answer flips it     │
+  │   • derived facts (coded_account = meals_50) forced by rules │
+  └──────────────────────────────┬───────────────────────────────┘
+                                 ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │ 3. RESOLVE                                                   │
+  │   fix = smallest change you control (Z3 Optimize, MaxSAT)    │
+  │   "get manager pre-approval" → waits on the Approvals page   │
+  │   "was this at a company event?" → one button, re-proven     │
+  └──────────────────────────────┬───────────────────────────────┘
+                                 ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │ 4. PAY & POST                                                │
+  │   mock card auth: limit $48, MCC 5812, expires in 24h,       │
+  │   proof_hash = sha256(facts, policy_version, verdict)        │
+  │   row posted to the ledger as meals_50                       │
+  └──────────────────────────────┬───────────────────────────────┘
+                                 ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │ 5. AUDIT                                                     │
+  │   the same rules run over every ledger row (35 rows: 1 ms)   │
+  └──────────────────────────────────────────────────────────────┘
+```
+
+**1. Read.** The request text goes to [Jev](https://typesafe.ai) (Typesafe's "System One" model) with one typed question per fact: a `choice` question for the expense kind, and `noul` (yes/no) questions for *client present* and *at company event*. Jev returns calibrated probabilities, never free text. A probability at or above 0.85 (or at or below 0.15) becomes a known fact; anything in between stays **unknown**. Amount, time of day, days since purchase, role and prior approvals come from the form, the clock and the employee records, never from a model. The exact question wording lives in [api/jev_live.py](api/jev_live.py) and was tuned on a labeled set with [api/bench_jev.py](api/bench_jev.py) (45/45 expense kinds, zero confidently-wrong booleans). Without a `TYPESAFE_API_KEY` a keyword stub stands in, and the dashboard labels those facts as read from text rather than from the model.
+
+**2. Decide.** Every rule is JSON of the form `when ⇒ require` over ten typed facts (see [engine/demo_policy.json](engine/demo_policy.json) and [engine/irs_pack.json](engine/irs_pack.json)). [engine/rules.py](engine/rules.py) compiles the packs once into Z3 formulas. For a case, the known facts are asserted as equalities and unknown facts are left free:
+
+- If no assignment of the unknowns satisfies all rules, the verdict is **violation**. Each failing rule is re-checked with tracked assumptions and `core.minimize` so the unsat core names exactly the facts that decided it ("amount, pre_approved").
+- If every assignment satisfies all rules, the verdict is **compliant**, and the rules whose conditions held are listed as applied.
+- Otherwise the verdict is **undetermined**: it depends on something nobody knows yet.
+
+Facts the rules force (like which account a meal posts to) are derived by asking Z3 which values remain satisfiable, so the IRS coding comes out of the same proof.
+
+**3. Resolve.** For a violation, the fix is the cheapest set of changes the person controls, found with `z3.Optimize` as soft constraints weighted by effort (changing the amount costs more than attaching a receipt). Open bounds are closed to whole cents, so "under $75" becomes $74.99, not "75 minus epsilon". When the fix is "get pre-approval" the case waits on the manager's Approvals page. For an undetermined case, each unknown yes/no fact is tried both ways; the ones whose answer changes the outcome become questions, sorted by how unsure the model was. Every answer or approval re-runs the whole proof; nothing is patched locally.
+
+**4. Pay and post.** A compliant case gets a mock card authorization: amount limit, merchant category code, 24-hour expiry, and a SHA-256 over the fact values, policy version and verdict. The authorization is idempotent and the row is posted to the ledger with the account the rules required.
+
+**5. Audit.** The ledger view runs `decide_transaction` over every row in `data/transactions.csv`, cached per policy version, so the new purchase and the whole history are judged the same way.
+
+---
+
+## Features
+
+### Purchase check
+
+Describe the purchase in your own words. The signed-in employee's role, the amount in the text (or the amount box), and the current time all become facts. Example chips cover the main paths.
+
+![Check page](docs/screenshots/check.png)
+
+### Verdict, cited rules, and the cheapest fix
+
+The case page says the answer in words, lists every rule it breaks with the facts that decided it, and shows what would make it compliant. The **What the rules saw** table shows each fact's value, where it came from (model, text, employee record, approvals, derived) and the model's confidence.
+
+Below it, **Why the rules decided this** is a dependency graph from facts to rules to verdict. Red wires are the facts in Z3's unsat core; gray rules never fired. Tick *Show all rules* to see that all 24 ran. **What if?** lets you override any fact and preview the re-proven verdict without saving anything.
+
+![Case needing approval, with the dependency graph](docs/screenshots/case-needs-approval.png)
+
+### One question when it depends
+
+When the verdict is undetermined, the page asks only the question that decides it. Answering re-proves the case instantly.
+
+![Undetermined case asking one question](docs/screenshots/case-question.png)
+
+### Manager approvals
+
+Managers see every case waiting on pre-approval, with the rule that put it there. Approve or reject. The list refreshes itself every five seconds, and the employee's case page flips on its own.
+
+![Approvals page](docs/screenshots/approvals.png)
+
+Approval also works over iMessage. The [photon/](photon/) sidecar texts the manager each waiting case and turns a YES or NO reply into the same approve call.
+
+### Card authorization with a proof hash
+
+Once compliant, **Authorize card** issues the mock authorization: the exact limit, the merchant category, the expiry, and the hash of the proof it rests on. A real card control would get the same limits.
+
+![Authorized case with the card and proof hash](docs/screenshots/case-authorized.png)
+
+### Ledger audit
+
+Every posted transaction, checked by the same rules as a new purchase. The summary counts verdicts and groups violations by rule. Click a transaction to open its full case and graph.
+
+![Ledger audit](docs/screenshots/ledger.png)
+
+### Policy Studio: rules in plain English, proven consistent
+
+Type a policy sentence. Claude turns it into a `when ⇒ require` rule over the known facts, Z3 compiles it, checks it against the other 24 rules for conflicts and dead conditions, and shows the result before anything is saved. **Save & Activate** swaps the live policy; the next check proves against it. The page also proves the whole policy consistent: no rule that can never fire, no two rules that disagree on the same purchase (with a concrete example when they do).
+
+![Policy Studio](docs/screenshots/rules.png)
+
+### QuickBooks bank-rule checker
+
+`POST /bank-rules/check` takes QuickBooks' own bank-rule model (description contains words, amount in a range, assign a category, first match wins) and uses Z3 string theory to find rules that are shadowed by earlier ones and pairs that overlap, with an example transaction that triggers both.
+
+### Sign in as anyone
+
+No passwords. Pick an employee, intern, contractor or manager, or create one. The role decides which rules apply; the manager flag shows the Approvals page.
+
+![Sign in](docs/screenshots/login.png)
+
+### Evaluation
+
+The Evaluation page serves `eval/results.json`: four systems (keyword rules, LLM judge, LLM facts + Z3, Jev + Z3) on the same held-out transactions, scored on verdict accuracy, rule-citation F1, rerun agreement, latency and cost. Until that file exists the page is empty and the header shows a **Sample data** chip, as in the screenshots above. The offline data loader, scenarios and benchmark harness that produce it are documented in [docs/backend.md](docs/backend.md).
+
+---
+
+## Why not an LLM, RAG, or if/else?
+
+Three ways people usually build this, and what each one cannot do.
+
+| | if/else or keyword rules | LLM judge (with or without RAG) | **apriori: typed model + Z3** |
+| --- | --- | --- | --- |
+| Reads messy text | Regex on the memo | Yes | Yes (Jev, calibrated probabilities) |
+| Says "I don't know" | Never; a missing fact makes the rule silently not fire | Rarely, and not reliably | Yes: unknown facts are free variables, verdict is *undetermined* |
+| Finds every broken rule | Only in the order you wrote the branches | Whatever it noticed | All of them, from one satisfiability check |
+| Explains why | The branch that fired | A paragraph that may cite rules that do not exist | The unsat core: the exact facts that decided each rule |
+| Cheapest fix | Hand-coded per branch | A suggestion | Optimal under effort weights (MaxSAT) |
+| The one question to ask | No | Maybe several | The fact whose answer flips the verdict |
+| Same answer on rerun | Yes | No | Yes, and the proof is hashed |
+| Proves the policy itself is consistent | No | No | Dead rules and conflicting pairs, with examples |
+| Adding a rule | Code change, re-test every branch | Re-prompt and hope | One JSON object, re-proven against the rest in milliseconds |
+| Cost per 1,000 checks | ~0 | Dollars | Cents (one short model call with three questions), then ~1 ms of solving |
+
+**Against if/else.** A hand-written checker is in this repo as the baseline: [engine/keyword_baseline.py](engine/keyword_baseline.py). It is a hundred lines of literal predicates and it shows the ceiling. It cannot say *undetermined* (a missing amount makes rule 3.4 silently pass), cannot cite which facts decided a verdict, cannot compute a fix, and every new rule is another branch to order correctly. The solver version treats the rules as data: the same 24 JSON objects drive the check, the fix, the questions, the policy audit and the graph.
+
+**Against an LLM deciding.** A language model can read "dinner with Acme's CFO" and know a client was present. It should not be the thing that decides whether $48 needs approval, because it will give a different answer tomorrow, invent a rule number, and cannot tell you it is unsure. apriori uses a model only where reading is required, through typed questions that return probabilities instead of prose, and it refuses to turn a 0.6 into a fact. Everything downstream is deterministic and checkable. The explanation on screen is filled from templates and the unsat core, never written by a model.
+
+**Against RAG.** Retrieval helps a model find the right paragraph of the handbook. It does not help it apply three rules jointly, notice that two of them contradict each other, or prove that no assignment of the unknowns is allowed. Those are satisfiability questions, and Z3 answers them exactly.
+
+---
+
+## Run it
+
+Python 3.11, Node 20 and pnpm. Copy `.env.example` to `.env`; a `TYPESAFE_API_KEY` turns on live Jev, and without it the keyword stub is used.
+
 ```bash
-./bin/jev-z3 demo
+# API, from the repo root
+python -m venv .venv && source .venv/bin/activate
+pip install -e '.[dev]'
+.venv/bin/python -m uvicorn api.main:app --port 8000     # loads data/*.csv on start; docs at /docs
+
+# Dashboard
+cd web && pnpm install && pnpm dev                        # http://localhost:3000, API_URL defaults to :8000
+
+# Optional: manager approval by iMessage (Photon Spectrum)
+cd photon && pnpm install && MANAGER_PHONE=+1... SPECTRUM_PROJECT_ID=... SPECTRUM_PROJECT_SECRET=... pnpm start
 ```
 
-### 1. Add a Natural Language Policy (with Automatic Z3 Contradiction Check)
+The four-minute demo script, which accounts to sign in as, and the second-best moments per audience are in [docs/demo-guide.md](docs/demo-guide.md).
+
+Try the engine from the terminal without the dashboard:
+
 ```bash
-./bin/jev-z3 add-rule 'All flights and airfare over $400 require manager approval.'
+python -m api.try_text "Client dinner with Acme's CFO, about $48"      # live Jev + Z3, full case printed
+python -m api.try_text --demo --local                                  # ten requests, keyword stub
+python -m api.bench_jev                                                # score Jev's question wording on labeled requests
 ```
-*If a rule contradicts existing company policies, Z3 mathematically rejects it:*
+
+Tests cover the engine, every API route and the dashboard's pure helpers:
+
 ```bash
-./bin/jev-z3 add-rule 'All flights and airfare over $400 are strictly prohibited and rejected.'
-# ❌ RULE REJECTED: Contradiction detected in Z3 against active flight policy!
+.venv/bin/pytest -q          # engine/, api/, tests/
+cd web && node --test lib/*.test.mjs   # format, graph and session helpers
 ```
 
-### 2. Ask Natural Language Purchase Queries ("Can I buy this?")
-```bash
-# Conditional Approval (Calculates requirements & auto-tags in QuickBooks)
-./bin/jev-z3 query 'Can I buy a $650 Datadog monitoring subscription for Engineering?'
+Natural-language rule drafting on the Policy page shells out to the Claude Code CLI on the API host (`claude -p`); without it the page reports that sentences cannot be translated and hand-written rules still work.
 
-# Auto-Approved Purchase (Under threshold, clear to swipe card)
-./bin/jev-z3 query 'Can I buy $45 of office supplies on Amazon?'
+---
 
-# Group Dining (Calculates per-attendee math: $320 / 4 people = $80/head)
-./bin/jev-z3 query 'Can I take 3 clients to dinner for $320 at Nobu?'
+## Repo layout
+
 ```
-
-### 3. List Active Rules and Inspect Compiled Z3 Formulas
-```bash
-# High-level summary of active rules
-./bin/jev-z3 list-rules
-
-# View rules along with their compiled Z3 first-order logic formulas
-./bin/jev-z3 list-rules --z3
-
-# Deep-dive into a specific rule (including standard SMT-LIB2 format)
-./bin/jev-z3 show-rule POL-002 --smt2
-```
-
-### 4. Parse a Single Natural Language Rule into Z3 Parameters
-```bash
-./bin/jev-z3 parse 'Meals and entertainment over $75 require itemized receipt'
-```
-```bash
-# Compliant transaction (meal with receipt)
-./bin/jev-z3 prove --rule 'Meals over $75 require itemized receipt' --amount 120 --has-receipt
-
-# Violation detected (meal without receipt)
-./bin/jev-z3 prove --rule 'Meals over $75 require itemized receipt' --amount 120
-```
-
-### 3. Check for Policy Contradictions
-```bash
-./bin/jev-z3 check-conflict \
-  --rule1 'All hardware purchases over $1000 are strictly prohibited and rejected.' \
-  --rule2 'All hardware purchases over $1000 require purchase order and manager approval.'
-```
-*Output:*
-```
-Status:      INCONSISTENT_POLICY
-Consistent:  False
-Proof Type:  SMT Contradiction Proof (Unsatisfiable Intersection)
-Explanation: Contradiction detected: Rules define mutually incompatible requirements on overlapping transactions.
+engine/      rules.py (Z3: check, fix, questions, audit), bank_rules.py (string theory),
+             schema.py (the ten facts), demo_policy.json + irs_pack.json (24 rules), keyword_baseline.py
+api/         FastAPI: routes_cases (check/answer/approve/authorize), routes_graph, routes_ledger,
+             routes_policy (+ policy_nl.py), routes_bank, routes_eval, routes_employees; db.py (SQLite);
+             jev_live.py (Typesafe client), try_text.py and bench_jev.py (CLIs)
+data/        transactions.csv, employees.csv, approvals.csv, extractions.jsonl (the demo ledger)
+web/         Next.js dashboard: app/ (check, cases/[id], approvals, ledger, rules, eval, login),
+             components/PurchaseGraph.tsx (dependency graph + What if?), lib/ (API client, formatting)
+photon/      Node sidecar: manager approval over iMessage
+jev_z3/      Person B's data loader, policy scenarios and offline evaluation (docs/backend.md)
+docs/        demo-guide.md, backend.md, quickbooks-integration.md, screenshots/
+API_CONTRACT.md   every route and shape; the OpenAPI schema at /openapi.json is the tie-breaker
 ```
 
 ---
 
-## 🐍 Python SDK Usage
+## API
 
-```python
-from jev_z3 import JevRuleClassifier, Z3SpendProofEngine, Transaction, SpendCategory
+Fourteen routes, all JSON, no auth, open CORS. Interactive docs at `http://localhost:8000/docs`; the full contract with every shape is [API_CONTRACT.md](API_CONTRACT.md).
 
-# 1. Initialize classifier and Z3 engine
-classifier = JevRuleClassifier()
-prover = Z3SpendProofEngine()
+| Route | What it does |
+| --- | --- |
+| `POST /check` | Text + employee (+ amount, timestamp) → a case, proven |
+| `GET /cases/{id}`, `GET /cases?awaiting_approval=true` | Read a case; list cases waiting on a manager |
+| `POST /cases/{id}/answer` | Answer one question; the case is re-proven |
+| `POST /cases/{id}/approve` | Manager decision; the case is re-proven |
+| `POST /cases/{id}/authorize` | Mock card authorization with proof hash (409 unless compliant) |
+| `GET /cases/{id}/graph`, `POST …/graph/preview` | Facts → rules → verdict graph; preview with overridden facts |
+| `GET /ledger`, `POST /ledger/audit` | Ledger rows with verdicts; audit summary by verdict and rule |
+| `GET /policy`, `POST /policy/audit` | The rules and facts; dead rules and conflicting pairs |
+| `POST /policy/rules/draft`, `POST /policy/rules`, `DELETE /policy/rules/{id}` | Sentence → rule (not saved); save; remove |
+| `POST /bank-rules/check` | Shadowed and overlapping QuickBooks bank rules |
+| `GET /eval`, `GET /health`, `POST /data/reload` | Evaluation table; liveness; re-read the data files |
 
-# 2. Classify natural language policy into Z3 parameters
-rule_text = "Software subscriptions over $500/month must be billed to Engineering and approved by a VP."
-params = classifier.classify_rule(rule_text)
-
-# 3. Formally verify an incoming transaction
-tx = Transaction(
-    id="tx_101",
-    amount=650.0,
-    category=SpendCategory.SOFTWARE_SAAS,
-    department="engineering",
-    approved_by_vp=True,
-)
-
-result = prover.prove_compliance(tx, params)
-print(f"Status: {result.status.value}")      # PROVEN_COMPLIANT
-print(f"Proof:  {result.proof_type}")        # SMT Unsatisfiability Certificate
-print(f"Time:   {result.solver_time_ms} ms") # ~1.8 ms
-```
+Every route that touches a purchase returns the same case shape, re-proven by Z3 on every call: verdict, facts with sources and probabilities, violations with their unsat cores, the fix, the questions, a templated explanation, and the approval and authorization if any.
 
 ---
 
-## 🧪 Testing
+## Data and known limits
 
-Run the test suite across classifier extraction, Z3 proofs, and QuickBooks balancing:
-```bash
-./.venv/bin/pytest -v
-```
+The demo ledger in `data/` is 33 hand-written QuickBooks-shaped rows for company `demo` (vendors like Nobu, Uber, Delta, Marriott, Figma, DoorDash) planted so that most rules fire at least once, plus two pre-approvals. It is loaded at API start and on `POST /data/reload`. Intuit's 100-company hackathon archive is ingested separately into 36,032 purchase cases by the backend loader; see [docs/backend.md](docs/backend.md) for what was added, excluded or synthesized. How a live QuickBooks Online connection would replace the CSV is worked out in [docs/quickbooks-integration.md](docs/quickbooks-integration.md).
 
-All 15 tests verify:
-- Semantic parameter extraction from diverse natural language rules
-- Z3 compliance proofs and counterexample extraction
-- Vacuous compliance outside threshold bounds
-- Per-attendee linear arithmetic verification
-- Mutual policy inconsistency detection
-- QuickBooks double-entry balance and class tagging
-- Anti-split evasion subset-sum detection
+Limits worth knowing:
 
-
-## Proof of Purchase API
-
-A FastAPI server that checks a purchase request against company and IRS rules with Z3, returns the verdict with the exact rules it breaks, the cheapest fix and a proof hash, and issues a mock card authorization once the case is compliant. Every route currently answers with sample JSON and an `X-Stub: 1` header until its real implementation lands.
-
-Run it:
-
-```bash
-python -m venv .venv && source .venv/bin/activate && pip install -e . && uvicorn api.main:app --reload --port 8000
-```
-
-Contract for every route and shape: [API_CONTRACT.md](API_CONTRACT.md). Interactive docs at `http://localhost:8000/docs`.
-
-### Changes to Intuit's data
-
-
-### Known limit
-
-`days_since_purchase` for a ledger row with a receipt is `receipt_date - timestamp`, so a receipt filed on day 75 satisfies IRS-receipt-60. The rules catch a receipt that is *missing* after the deadline, not one that arrived late.
-
-## Dashboard
-
-Next.js app in `web/` (Person C). Every page fetches the API server-side on each request.
-
-```bash
-cd web && pnpm install && pnpm dev     # http://localhost:3000, needs the API on http://localhost:8000
-```
-
-One environment variable, `API_URL` (`web/.env.local` locally; `http://localhost:8000` by default). Types come from the API's own schema; regenerate after a shape change:
-
-```bash
-cd web && pnpm dlx openapi-typescript http://localhost:8000/openapi.json -o lib/openapi.d.ts
-```
+- `days_since_purchase` for a ledger row with a receipt is `receipt_date - timestamp`, so a receipt filed on day 75 satisfies the IRS 60-day rule. The rules catch a receipt that is *missing* after the deadline, not one that arrived late.
+- A date-only timestamp leaves `hour` unknown, so the late-meal and early-meal rules go undetermined instead of firing at midnight.
+- The card authorization is a mock with the limits a real card control would receive; no payment network is called.
+- Manager sign-in is a cookie flag with no password. It is a two-laptop demo, not an auth system.
