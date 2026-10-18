@@ -213,3 +213,51 @@ def test_concurrent_first_connections_are_race_safe(tmp_path):
         assert errs == []
         with closing(db.connect(path)) as conn:
             assert conn.execute("select count(*) from employees").fetchone()[0] == 4
+
+
+def test_reviewer_employees_csv_beats_seed_across_reconnects(tmp_path):
+    (tmp_path / "employees.csv").write_text(
+        "employee_id,name,role,manager_id\ne_manager,Zoë Ünïcode,manager,\ne_intern,Ria P,employee,e_manager\n",
+        encoding="utf-8")
+    p = tmp_path / "t.db"
+    with closing(db.connect(p)) as conn:
+        db.load_data_dir(conn, tmp_path)
+    for _ in range(3):  # repeated connects (re-run init) must not revert B's rows to the seed
+        with closing(db.connect(p)) as conn:
+            assert db.employee(conn, "e_manager") == {"employee_id": "e_manager", "name": "Zoë Ünïcode",
+                                                      "role": "manager", "manager_id": ""}
+            assert db.employee(conn, "e_intern")["role"] == "employee"
+            assert conn.execute("select count(*) from employees").fetchone()[0] == 4
+
+
+def test_reviewer_seed_not_reinserted_when_table_has_only_b_rows(tmp_path):
+    p = tmp_path / "t.db"
+    with closing(db.connect(p)) as conn:
+        conn.execute("DELETE FROM employees")
+        conn.execute("INSERT INTO employees VALUES ('z1','Zed','intern','')")
+        conn.commit()
+    with closing(db.connect(p)) as conn:
+        assert [r[0] for r in conn.execute("select employee_id from employees")] == ["z1"]
+
+
+def test_reviewer_concurrent_connects_after_reload_keep_b_rows(tmp_path):
+    import threading
+    (tmp_path / "employees.csv").write_text("employee_id,name,role,manager_id\ne_manager,B Boss,manager,\n",
+                                            encoding="utf-8")
+    p = tmp_path / "t.db"
+    with closing(db.connect(p)) as conn:
+        db.load_data_dir(conn, tmp_path)
+    b, errs = threading.Barrier(8), []
+
+    def go():
+        try:
+            b.wait()
+            with closing(db.connect(p)) as c:
+                db.put_verdict(c, "t1", "v1", {"verdict": "pass"})
+        except Exception as x:  # noqa: BLE001
+            errs.append(repr(x))
+    ts = [threading.Thread(target=go) for _ in range(8)]
+    [t.start() for t in ts]; [t.join() for t in ts]
+    assert errs == []
+    with closing(db.connect(p)) as conn:
+        assert db.employee(conn, "e_manager")["name"] == "B Boss"
