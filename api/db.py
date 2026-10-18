@@ -215,3 +215,12 @@ def load_data_dir(conn, data_dir=None) -> dict:
     out["transactions"] = len({r["txn_id"] for r in rows if r["txn_id"] in seen})
     conn.commit()
     return out
+
+
+def add_employee(conn, employee_id, name, role, manager_id):
+    conn.execute("INSERT INTO employees VALUES (?,?,?,?)", (employee_id, name, role, manager_id))
+    conn.commit()
+
+
+def list_employees(conn) -> list:
+    return [dict(r) for r in conn.execute("SELECT * FROM employees ORDER BY name")]

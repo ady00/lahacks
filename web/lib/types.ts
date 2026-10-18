@@ -15,3 +15,5 @@ export type EvalOut = S["EvalOut"];
 export type Health = S["Health"];
 export type FixStep = S["FixStep"];
 export type Fact = S["Fact"];
+export type Employee = S["Employee"];
+export type EmployeeList = S["EmployeeList"];

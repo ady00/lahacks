@@ -209,3 +209,21 @@ class Health(_M):
     ok: bool
     policy_version: str
     stub: bool
+
+
+# ---- employees (dashboard signup) ----
+class EmployeeIn(_M):
+    name: str
+    role: Literal["employee", "contractor", "intern"]
+    manager_id: str = ""
+
+
+class Employee(_M):
+    employee_id: str
+    name: str
+    role: str
+    manager_id: str
+
+
+class EmployeeList(_M):
+    employees: list[Employee]
