@@ -2,6 +2,8 @@
 
 A formal verification pipeline that translates natural language expense policies, procurement controls, and QuickBooks accounting rules into typed logical parameters, then proves transaction compliance, policy consistency, and ledger balancing using the **Z3 SMT Solver**.
 
+Person B's versioned data loader, policy scenarios, and offline benchmark services are documented in [docs/backend.md](docs/backend.md). Start with `purchase-backend build` and `purchase-backend evaluate` after `pip install -e '.[dev]'`.
+
 ---
 
 ## 💡 The Core Problem

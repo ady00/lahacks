@@ -1,0 +1,2166 @@
+{
+  "company_count": 100,
+  "file_count": 2302,
+  "uncompressed_bytes": 414307293,
+  "profiles": {
+    "wholesale": 22,
+    "construction": 22,
+    "mixed": 12,
+    "recurring": 16,
+    "pos": 14,
+    "appointments": 10,
+    "nonprofit": 4
+  },
+  "size_tiers": {
+    "small": 37,
+    "medium": 32,
+    "large": 31
+  },
+  "unique_industries": 71,
+  "distressed_companies": 7,
+  "loss_making_companies": 27,
+  "business_statuses": {
+    "open": 78,
+    "operating": 21,
+    "distressed": 1
+  },
+  "actual_entity_counts": {
+    "company": 100,
+    "invoices": 84451,
+    "vendors": 821,
+    "sales_receipts": 28501,
+    "customer_payments": 143616,
+    "bank_transactions": 234610,
+    "items": 384,
+    "payroll_runs": 25733,
+    "journal_entries": 151730,
+    "customers": 8322,
+    "terms": 176,
+    "bill_payments": 36032,
+    "employees": 582,
+    "projects": 203,
+    "estimates": 299,
+    "accounts": 3700,
+    "bills": 39563
+  },
+  "companies_with_entity": {
+    "company": 100,
+    "invoices": 86,
+    "vendors": 100,
+    "sales_receipts": 28,
+    "customer_payments": 84,
+    "bank_transactions": 100,
+    "items": 100,
+    "payroll_runs": 100,
+    "journal_entries": 100,
+    "customers": 100,
+    "terms": 100,
+    "bill_payments": 100,
+    "employees": 100,
+    "projects": 34,
+    "estimates": 24,
+    "accounts": 100,
+    "bills": 100
+  },
+  "financials_usd": {
+    "cash": {
+      "min": 8.38,
+      "median": 143851.31,
+      "max": 2311270.33,
+      "total": 32719291.02
+    },
+    "revenue": {
+      "min": 7292.8,
+      "median": 794141.4299999999,
+      "max": 5324879.97,
+      "total": 107617730.45
+    },
+    "profit": {
+      "min": -364852.53,
+      "median": 51343.134999999995,
+      "max": 2132150.26,
+      "total": 15118893.99
+    },
+    "receivables": {
+      "min": 0.0,
+      "median": 34346.14,
+      "max": 679556.89,
+      "total": 9012657.59
+    },
+    "payables": {
+      "min": 2896.03,
+      "median": 47586.06,
+      "max": 793039.58,
+      "total": 8033299.03
+    },
+    "debt": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 75000.0,
+      "total": 1503477.63
+    }
+  },
+  "aging_usd": {
+    "ar": {
+      "current": 7530164.88,
+      "1-30": 1409927.93,
+      "31-60": 38354.58,
+      "61-90": 20214.14,
+      "90+": 13996.06
+    },
+    "ap": {
+      "current": 6867179.36,
+      "1-30": 241342.74,
+      "31-60": 26218.01,
+      "61-90": 26383.98,
+      "90+": 63440.84
+    }
+  },
+  "bank_date_range": [
+    "2025-10-06",
+    "2026-10-06"
+  ],
+  "report_periods": [
+    [
+      "2025-10-06",
+      "2026-10-06"
+    ]
+  ],
+  "validation_error_counts": {
+    "duplicate_ids_within_company_entity": 0,
+    "document_line_sum": 0,
+    "bill_line_sum": 0,
+    "unbalanced_journal": 0,
+    "missing_payment_document": 0,
+    "payment_application_sum": 0,
+    "bank_running_balance": 0,
+    "bank_vs_index_cash": 0,
+    "balance_sheet_equation": 0,
+    "profit_vs_index": 0,
+    "monthly_profit_sum": 0,
+    "aging_bucket_sum": 0
+  },
+  "index_count_mismatches": [],
+  "distinct_schemas": 1,
+  "journal_purposes": {
+    "opening_equity": 100,
+    "cost_of_goods": 75863,
+    "wage_accrual": 26705,
+    "wage_payment": 25733,
+    "owner_distribution": 152,
+    "bad_debt": 41,
+    "financing_draw": 273,
+    "interest_accrual": 7196,
+    "financing_repayment": 32,
+    "depreciation": 5923,
+    "deposit_receipt": 190,
+    "wip_capitalization": 4077,
+    "wip_release": 859,
+    "client_default": 7,
+    "card_settlement": 4576,
+    "inventory_disposal": 3
+  },
+  "hidden_files": 0,
+  "companies": [
+    {
+      "company_id": "company-001",
+      "display_name": "Hearthloaf Bakeries",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 104107.55,
+        "revenue": 809717.76,
+        "profit": 90544.13,
+        "receivables": 26128.87,
+        "payables": 29999.25,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 5098.37,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-002",
+      "display_name": "Roastline Coffee Roasters",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 96080.62,
+        "revenue": 1157894.23,
+        "profit": 70053.47,
+        "receivables": 52087.96,
+        "payables": 34867.65,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 24778.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-003",
+      "display_name": "Keghouse Brewing Co",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 152717.19,
+        "revenue": 1895102.43,
+        "profit": 9413.37,
+        "receivables": 103707.51,
+        "payables": 47688.87,
+        "debt": 30421.52
+      },
+      "ar_overdue_usd": 45174.82,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-004",
+      "display_name": "Stitchform Apparel Co",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 127153.12,
+        "revenue": 1686191.47,
+        "profit": 168533.48,
+        "receivables": 58413.49,
+        "payables": 47284.56,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 20863.98,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-005",
+      "display_name": "Pistonhouse Auto Parts",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 192203.23,
+        "revenue": 3391119.28,
+        "profit": 517431.07,
+        "receivables": 172345.39,
+        "payables": 89459.56,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 78840.44,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-006",
+      "display_name": "Knotwood Lumber Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 2217221.52,
+        "revenue": 4377094.71,
+        "profit": 479492.93,
+        "receivables": 652080.06,
+        "payables": 51889.23,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 65795.76,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-007",
+      "display_name": "Scrubline Medical Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 504461.57,
+        "revenue": 1357851.02,
+        "profit": 107845.52,
+        "receivables": 208868.77,
+        "payables": 18899.41,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 32534.48,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-008",
+      "display_name": "Conduitworks Electrical Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 1676968.01,
+        "revenue": 4487590.99,
+        "profit": 942713.12,
+        "receivables": 656485.88,
+        "payables": 793039.58,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 48595.9,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-009",
+      "display_name": "Soldertown Plumbing Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 1116677.18,
+        "revenue": 2930124.17,
+        "profit": 266337.47,
+        "receivables": 462437.36,
+        "payables": 38204.31,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 53069.55,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-010",
+      "display_name": "Driveline Machinery Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 54043.56,
+        "revenue": 416073.1,
+        "profit": -125641.12,
+        "receivables": 70155.48,
+        "payables": 9228.65,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 11189.23,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-011",
+      "display_name": "Grindell Industrial Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 575239.7,
+        "revenue": 2196650.34,
+        "profit": 96621.96,
+        "receivables": 363791.73,
+        "payables": 399149.24,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 20058.34,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-012",
+      "display_name": "Baseline Sporting Goods",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 95598.18,
+        "revenue": 848133.47,
+        "profit": -359264.11,
+        "receivables": 110571.4,
+        "payables": 103520.76,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 10011.11,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-013",
+      "display_name": "Ledgermark Office Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 107460.4,
+        "revenue": 400714.33,
+        "profit": -36204.6,
+        "receivables": 64064.84,
+        "payables": 2896.03,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 5259.31,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-014",
+      "display_name": "Rollforth Paper Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 538355.12,
+        "revenue": 1981599.26,
+        "profit": 145564.57,
+        "receivables": 314742.3,
+        "payables": 342936.03,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 49152.35,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-015",
+      "display_name": "Harvest Line Food Distributors",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 1541883.81,
+        "revenue": 3901016.92,
+        "profit": 330028.48,
+        "receivables": 679556.89,
+        "payables": 685042.97,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 40103.9,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-016",
+      "display_name": "Coppervat Beverage Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 151906.5,
+        "revenue": 370736.65,
+        "profit": -75113.76,
+        "receivables": 50580.66,
+        "payables": 46701.61,
+        "debt": 47340.76
+      },
+      "ar_overdue_usd": 6870.77,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-017",
+      "display_name": "Trinketvale Novelty Distributors",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 612181.48,
+        "revenue": 1526776.54,
+        "profit": -44168.2,
+        "receivables": 200138.1,
+        "payables": 203923.53,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 6435.12,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-018",
+      "display_name": "Shipwise Online Goods",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 316120.93,
+        "revenue": 3145953.37,
+        "profit": 223133.59,
+        "receivables": 180512.8,
+        "payables": 114459.37,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 88759.58,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-019",
+      "display_name": "Pawmart Pet Supply",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 105125.33,
+        "revenue": 1989476.14,
+        "profit": 451472.18,
+        "receivables": 73255.58,
+        "payables": 68378.52,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 32845.63,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-020",
+      "display_name": "Palletbay Storage & Warehousing",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": true,
+      "financials_usd": {
+        "cash": 6533.65,
+        "revenue": 701488.31,
+        "profit": -194455.63,
+        "receivables": 28508.72,
+        "payables": 17166.86,
+        "debt": 57867.03
+      },
+      "ar_overdue_usd": 14928.21,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-021",
+      "display_name": "Crumbford Commercial Bakery",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 218440.55,
+        "revenue": 2893312.03,
+        "profit": 460520.64,
+        "receivables": 131891.4,
+        "payables": 103717.77,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 58893.6,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-022",
+      "display_name": "Emberpot Coffee Roasters",
+      "profile": "wholesale",
+      "business_status": "open",
+      "distressed": true,
+      "financials_usd": {
+        "cash": 116.38,
+        "revenue": 7292.8,
+        "profit": -36776.4,
+        "receivables": 0.0,
+        "payables": 36073.75,
+        "debt": 17524.74
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-023",
+      "display_name": "Reelmark Productions",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 85297.69,
+        "revenue": 596605.86,
+        "profit": 24936.72,
+        "receivables": 129937.5,
+        "payables": 72569.91,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 66294.64,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-024",
+      "display_name": "Trueline Architecture",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 470092.32,
+        "revenue": 1284255.47,
+        "profit": 129381.74,
+        "receivables": 71401.65,
+        "payables": 93918.47,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 61278.28,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-025",
+      "display_name": "Umber Room Interiors",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 857808.33,
+        "revenue": 1397622.45,
+        "profit": 22958.08,
+        "receivables": 319281.81,
+        "payables": 198554.41,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 35390.76,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-026",
+      "display_name": "Loudfield Advertising",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 266545.51,
+        "revenue": 1031119.76,
+        "profit": 133725.77,
+        "receivables": 33651.24,
+        "payables": 75820.08,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 32464.28,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-027",
+      "display_name": "Saffron Table Catering",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 387849.1,
+        "revenue": 1194107.5,
+        "profit": 75024.69,
+        "receivables": 40720.45,
+        "payables": 154147.04,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-028",
+      "display_name": "Gilded Oak Weddings",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 867178.05,
+        "revenue": 1378498.99,
+        "profit": 27043.7,
+        "receivables": 93546.32,
+        "payables": 202635.66,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 13439.47,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-029",
+      "display_name": "Birchfield Custom Homes",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 85227.62,
+        "revenue": 886490.83,
+        "profit": 12799.3,
+        "receivables": 85681.64,
+        "payables": 28834.95,
+        "debt": 36087.43
+      },
+      "ar_overdue_usd": 85681.64,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-030",
+      "display_name": "Hearthworn Remodeling",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 269814.6,
+        "revenue": 1123975.88,
+        "profit": 46272.77,
+        "receivables": 212904.25,
+        "payables": 161271.85,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 212904.25,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-031",
+      "display_name": "Keystone Commercial Construction",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 840923.03,
+        "revenue": 1251325.21,
+        "profit": -41075.2,
+        "receivables": 245975.01,
+        "payables": 100653.93,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 104889.15,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-032",
+      "display_name": "Clapboard Lane Films",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 201019.57,
+        "revenue": 418816.72,
+        "profit": -6005.81,
+        "receivables": 27964.28,
+        "payables": 65238.44,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-033",
+      "display_name": "Datum Point Architects",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 392957.64,
+        "revenue": 1150342.83,
+        "profit": 78477.99,
+        "receivables": 223389.25,
+        "payables": 209028.01,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-034",
+      "display_name": "Soft Palette Interiors",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 912311.4,
+        "revenue": 922300.94,
+        "profit": -2491.43,
+        "receivables": 89647.92,
+        "payables": 103171.8,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-035",
+      "display_name": "Brightmark Ad Agency",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 387600.86,
+        "revenue": 966822.16,
+        "profit": 118082.16,
+        "receivables": 35041.04,
+        "payables": 83486.94,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 7712.07,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-036",
+      "display_name": "Greenverge Landscaping",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 352321.79,
+        "revenue": 777195.59,
+        "profit": 52042.52,
+        "receivables": 136883.16,
+        "payables": 91933.76,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-037",
+      "display_name": "Copper Ladle Catering",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 863488.19,
+        "revenue": 823935.1,
+        "profit": 13936.52,
+        "receivables": 139825.39,
+        "payables": 84079.34,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 33475.66,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-038",
+      "display_name": "Confetti Row Events",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 249486.38,
+        "revenue": 754752.0,
+        "profit": 59634.88,
+        "receivables": 53126.61,
+        "payables": 52922.6,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 1139.49,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-039",
+      "display_name": "Lanterncrest Home Construction",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 341538.1,
+        "revenue": 375709.2,
+        "profit": -66382.21,
+        "receivables": 45075.49,
+        "payables": 28170.96,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-040",
+      "display_name": "Courtyard Commons Apartments Construction",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 758556.65,
+        "revenue": 1007490.55,
+        "profit": -89421.66,
+        "receivables": 197675.66,
+        "payables": 87060.05,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 5955.79,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-041",
+      "display_name": "Clovermead Homes",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 125076.47,
+        "revenue": 499280.49,
+        "profit": -692.36,
+        "receivables": 105693.77,
+        "payables": 46802.91,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-042",
+      "display_name": "Sawhorse Home Remodelers",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 492677.72,
+        "revenue": 1085555.86,
+        "profit": 67881.11,
+        "receivables": 106679.37,
+        "payables": 181266.17,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-043",
+      "display_name": "Granary Commercial Builders",
+      "profile": "construction",
+      "business_status": "operating",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 1001921.5,
+        "revenue": 1395487.95,
+        "profit": 10534.77,
+        "receivables": 85059.63,
+        "payables": 187976.0,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 9778.25,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-044",
+      "display_name": "Lumenwork Video",
+      "profile": "construction",
+      "business_status": "distressed",
+      "distressed": true,
+      "financials_usd": {
+        "cash": 8.38,
+        "revenue": 403561.48,
+        "profit": -364852.53,
+        "receivables": 0.0,
+        "payables": 39860.91,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-045",
+      "display_name": "Sunward Roof & Solar",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 154654.26,
+        "revenue": 487661.1,
+        "profit": -7383.08,
+        "receivables": 2959.46,
+        "payables": 39375.71,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 388.61,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-046",
+      "display_name": "Brightline Electric & Supply",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 140653.05,
+        "revenue": 680813.62,
+        "profit": 10046.7,
+        "receivables": 2094.3,
+        "payables": 77459.73,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-047",
+      "display_name": "Ductline Mechanical & Supply",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 74882.38,
+        "revenue": 975053.87,
+        "profit": 50643.75,
+        "receivables": 147203.95,
+        "payables": 61154.26,
+        "debt": 53859.26
+      },
+      "ar_overdue_usd": 152.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-048",
+      "display_name": "Guardwire Security Systems",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 187903.65,
+        "revenue": 442996.09,
+        "profit": -17937.82,
+        "receivables": 13734.21,
+        "payables": 33971.26,
+        "debt": 29476.5
+      },
+      "ar_overdue_usd": 118.01,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-049",
+      "display_name": "Jointer Finish Carpentry",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 100280.62,
+        "revenue": 337339.34,
+        "profit": -49288.41,
+        "receivables": 5963.92,
+        "payables": 19054.63,
+        "debt": 18333.29
+      },
+      "ar_overdue_usd": 1637.06,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-050",
+      "display_name": "Plasterline Finishing & Supply",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 136940.04,
+        "revenue": 661145.86,
+        "profit": -13865.1,
+        "receivables": 9673.3,
+        "payables": 26045.68,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 1535.17,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-051",
+      "display_name": "Oddjob Specialty Trades & Supply",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 137637.98,
+        "revenue": 367023.77,
+        "profit": -57431.9,
+        "receivables": 13032.84,
+        "payables": 19093.05,
+        "debt": 62926.81
+      },
+      "ar_overdue_usd": 345.95,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-052",
+      "display_name": "Maple & Stone Kitchens",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 266321.57,
+        "revenue": 779528.74,
+        "profit": 41396.62,
+        "receivables": 20271.64,
+        "payables": 47483.25,
+        "debt": 8845.95
+      },
+      "ar_overdue_usd": 203.7,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-053",
+      "display_name": "Brightface Sign Co",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 135118.99,
+        "revenue": 881660.22,
+        "profit": 38511.84,
+        "receivables": 59076.93,
+        "payables": 62179.44,
+        "debt": 15833.29
+      },
+      "ar_overdue_usd": 7751.49,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-054",
+      "display_name": "Signalcraft Systems Integration",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 74175.8,
+        "revenue": 401736.31,
+        "profit": -51171.39,
+        "receivables": 51592.02,
+        "payables": 53004.33,
+        "debt": 46094.74
+      },
+      "ar_overdue_usd": 27731.76,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-055",
+      "display_name": "Peakline Roof & Solar",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 111256.02,
+        "revenue": 475008.37,
+        "profit": -47697.67,
+        "receivables": 20066.92,
+        "payables": 25021.55,
+        "debt": 28866.31
+      },
+      "ar_overdue_usd": 15573.42,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-056",
+      "display_name": "Voltpost Electrical Contractors",
+      "profile": "mixed",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 262716.18,
+        "revenue": 1020241.33,
+        "profit": 66358.18,
+        "receivables": 20721.12,
+        "payables": 73904.29,
+        "debt": 75000.0
+      },
+      "ar_overdue_usd": 7614.24,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-057",
+      "display_name": "Ledgerline Bookkeeping",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 25269.19,
+        "revenue": 137083.44,
+        "profit": 31389.89,
+        "receivables": 7725.29,
+        "payables": 5969.19,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-058",
+      "display_name": "Beacon Hill Tax & Accounting",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 58613.81,
+        "revenue": 286393.89,
+        "profit": 37614.39,
+        "receivables": 23585.86,
+        "payables": 9788.25,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-059",
+      "display_name": "Stackwise Managed IT",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 146123.72,
+        "revenue": 647037.47,
+        "profit": 182178.11,
+        "receivables": 48062.63,
+        "payables": 22505.69,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-060",
+      "display_name": "Fernwood Payroll Services",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 25033.68,
+        "revenue": 117252.72,
+        "profit": 15723.6,
+        "receivables": 4575.69,
+        "payables": 5008.17,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-061",
+      "display_name": "Clearbook CPA Group",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 57679.87,
+        "revenue": 316850.62,
+        "profit": 35332.18,
+        "receivables": 22748.93,
+        "payables": 9984.58,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-062",
+      "display_name": "Ironbark Fitness Club",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 191088.33,
+        "revenue": 808754.12,
+        "profit": 272236.5,
+        "receivables": 48833.88,
+        "payables": 18252.77,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-063",
+      "display_name": "Helm & Harbor PR Retainers",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 29000.19,
+        "revenue": 209663.95,
+        "profit": 88728.48,
+        "receivables": 17207.34,
+        "payables": 9700.19,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-064",
+      "display_name": "Stonebriar Residential Properties",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 61397.49,
+        "revenue": 445133.05,
+        "profit": 223600.83,
+        "receivables": 19540.45,
+        "payables": 15624.05,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-065",
+      "display_name": "Oakmoor Property Management",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 789670.59,
+        "revenue": 1343226.85,
+        "profit": 844053.05,
+        "receivables": 28282.43,
+        "payables": 54873.83,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-066",
+      "display_name": "Garnet Row Apartments",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 33296.57,
+        "revenue": 412771.03,
+        "profit": 262364.66,
+        "receivables": 15858.61,
+        "payables": 20746.57,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-067",
+      "display_name": "Lanternwade Commercial Realty",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 428025.18,
+        "revenue": 1045834.71,
+        "profit": 697370.63,
+        "receivables": 38847.55,
+        "payables": 47979.79,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-068",
+      "display_name": "Willowmere Lofts",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 623564.87,
+        "revenue": 1088378.07,
+        "profit": 663904.27,
+        "receivables": 23881.16,
+        "payables": 47769.12,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-069",
+      "display_name": "Meridian Wealth Advisors",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 82167.62,
+        "revenue": 459282.22,
+        "profit": 157267.44,
+        "receivables": 93062.82,
+        "payables": 15279.62,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-070",
+      "display_name": "Larchmont Capital Counsel",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 166654.1,
+        "revenue": 1138199.52,
+        "profit": 590523.12,
+        "receivables": 218760.25,
+        "payables": 35771.39,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-071",
+      "display_name": "Northgate Portfolio Partners",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 1318334.48,
+        "revenue": 3101075.45,
+        "profit": 1946568.12,
+        "receivables": 634976.37,
+        "payables": 121267.54,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-072",
+      "display_name": "Silverbirch Financial Planning",
+      "profile": "recurring",
+      "business_status": "open",
+      "distressed": true,
+      "financials_usd": {
+        "cash": 164.82,
+        "revenue": 272498.65,
+        "profit": -34635.03,
+        "receivables": 49088.31,
+        "payables": 57511.42,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-073",
+      "display_name": "Copper Kettle Cafe",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 39013.6,
+        "revenue": 396121.04,
+        "profit": 92910.39,
+        "receivables": 0.0,
+        "payables": 19029.76,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-074",
+      "display_name": "Driftwood Espresso Bar",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 51856.55,
+        "revenue": 509425.35,
+        "profit": 99541.79,
+        "receivables": 0.0,
+        "payables": 22871.81,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-075",
+      "display_name": "Morning Lark Bakeshop",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 87843.51,
+        "revenue": 730214.49,
+        "profit": 79718.25,
+        "receivables": 0.0,
+        "payables": 28383.63,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-076",
+      "display_name": "Juniper & Rye Coffeehouse",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 22606.34,
+        "revenue": 211929.41,
+        "profit": 3163.06,
+        "receivables": 0.0,
+        "payables": 10865.66,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-077",
+      "display_name": "Sugarpine Donut Co.",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 42134.18,
+        "revenue": 365955.96,
+        "profit": 12488.08,
+        "receivables": 0.0,
+        "payables": 15245.54,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-078",
+      "display_name": "Little Harvest Juice Bar",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 1206645.2,
+        "revenue": 3341504.76,
+        "profit": 1098637.76,
+        "receivables": 0.0,
+        "payables": 154316.87,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-079",
+      "display_name": "Tavola Rossa Trattoria",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 109075.2,
+        "revenue": 993008.62,
+        "profit": 231102.28,
+        "receivables": 0.0,
+        "payables": 47880.36,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-080",
+      "display_name": "Blue Heron Bistro",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 144024.95,
+        "revenue": 1105144.77,
+        "profit": 131995.15,
+        "receivables": 0.0,
+        "payables": 48153.17,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-081",
+      "display_name": "Smokestack Barbecue House",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 2311270.33,
+        "revenue": 5324879.97,
+        "profit": 2132150.26,
+        "receivables": 0.0,
+        "payables": 252274.04,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-082",
+      "display_name": "Lotus Garden Kitchen",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 87160.17,
+        "revenue": 607266.6,
+        "profit": 36631.91,
+        "receivables": 0.0,
+        "payables": 28209.39,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-083",
+      "display_name": "El Farolito Taqueria",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 154494.05,
+        "revenue": 1009132.69,
+        "profit": 189620.07,
+        "receivables": 0.0,
+        "payables": 73399.93,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-084",
+      "display_name": "Pagewood Books & Prints",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 586577.75,
+        "revenue": 2173708.27,
+        "profit": 517222.13,
+        "receivables": 0.0,
+        "payables": 156583.75,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-085",
+      "display_name": "Thistle & Thread Yarn Shop",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 85652.66,
+        "revenue": 764855.21,
+        "profit": 140227.56,
+        "receivables": 0.0,
+        "payables": 54868.17,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-086",
+      "display_name": "Rolling Spoke Bicycle Shop",
+      "profile": "pos",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 109212.15,
+        "revenue": 851400.44,
+        "profit": 126047.51,
+        "receivables": 0.0,
+        "payables": 57158.29,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-087",
+      "display_name": "Lakeview Family Dental",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 17011.0,
+        "revenue": 299792.83,
+        "profit": -17496.77,
+        "receivables": 4460.55,
+        "payables": 13350.8,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 1219.45,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-088",
+      "display_name": "Birchwood Orthodontics",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 68350.14,
+        "revenue": 501666.0,
+        "profit": 21655.04,
+        "receivables": 11394.84,
+        "payables": 19157.45,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 919.79,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-089",
+      "display_name": "Cedar Hollow Veterinary Clinic",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 307125.7,
+        "revenue": 1340914.41,
+        "profit": 330782.88,
+        "receivables": 18986.3,
+        "payables": 44705.11,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 3873.83,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-090",
+      "display_name": "Elm Street Counseling Group",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": true,
+      "financials_usd": {
+        "cash": 5293.19,
+        "revenue": 261453.87,
+        "profit": -59111.73,
+        "receivables": 3991.56,
+        "payables": 47699.5,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 276.56,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-091",
+      "display_name": "Quietwater Counsel LLP",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 143677.67,
+        "revenue": 713647.52,
+        "profit": 156950.61,
+        "receivables": 73274.9,
+        "payables": 35887.14,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 453.37,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-092",
+      "display_name": "Ashgrove Family Law",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 220188.51,
+        "revenue": 1168628.28,
+        "profit": 85695.08,
+        "receivables": 50216.67,
+        "payables": 27962.85,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 991.54,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-093",
+      "display_name": "Hollis & Pine Legal Group",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 23138.22,
+        "revenue": 314225.66,
+        "profit": 511.74,
+        "receivables": 27160.68,
+        "payables": 28442.35,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 326.3,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-094",
+      "display_name": "Velvet Finch Salon",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 67911.32,
+        "revenue": 320652.85,
+        "profit": 73145.25,
+        "receivables": 374.22,
+        "payables": 13547.56,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 149.46,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-095",
+      "display_name": "Clipper & Crown Barbershop",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 154696.02,
+        "revenue": 590014.6,
+        "profit": 143937.59,
+        "receivables": 324.09,
+        "payables": 20944.86,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 68.82,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-096",
+      "display_name": "Golden Hour Massage Studio",
+      "profile": "appointments",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 23759.18,
+        "revenue": 146994.75,
+        "profit": 9740.59,
+        "receivables": 58.97,
+        "payables": 7598.84,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-097",
+      "display_name": "Brightwater Community Fund",
+      "profile": "nonprofit",
+      "business_status": "open",
+      "distressed": true,
+      "financials_usd": {
+        "cash": 2161.62,
+        "revenue": 119930.18,
+        "profit": -27866.55,
+        "receivables": 3900.0,
+        "payables": 12937.62,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 3900.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-098",
+      "display_name": "Open Table Food Pantry",
+      "profile": "nonprofit",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 61092.08,
+        "revenue": 285813.79,
+        "profit": 26228.54,
+        "receivables": 17600.0,
+        "payables": 9473.35,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 17600.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-099",
+      "display_name": "Riverstage Arts Alliance",
+      "profile": "nonprofit",
+      "business_status": "open",
+      "distressed": false,
+      "financials_usd": {
+        "cash": 47034.87,
+        "revenue": 539547.19,
+        "profit": -173868.01,
+        "receivables": 0.0,
+        "payables": 26280.37,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    },
+    {
+      "company_id": "company-100",
+      "display_name": "Lanternlight Community Theater",
+      "profile": "nonprofit",
+      "business_status": "open",
+      "distressed": true,
+      "financials_usd": {
+        "cash": 1363.33,
+        "revenue": 93094.42,
+        "profit": -109162.11,
+        "receivables": 0.0,
+        "payables": 86359.81,
+        "debt": 0.0
+      },
+      "ar_overdue_usd": 0.0,
+      "period_start": "2025-10-06",
+      "period_end": "2026-10-06",
+      "months": 13,
+      "full_months": 11
+    }
+  ]
+}
