@@ -67,7 +67,7 @@ const ACCOUNTS: Record<string, string> = {
   meals_100: "Meals at a company event, 100% deductible",
   entertainment_0: "Entertainment, not deductible",
   travel: "Travel",
-  office: "Office",
+  office: "Office expenses",
   other: "Other",
 };
 export const accountLabel = (v: string) => ACCOUNTS[v] ?? v;
@@ -94,7 +94,7 @@ export function valueText(name: string, v: unknown): string {
   if (v == null) return "unknown";
   if (name === "amount") return usd(Number(v));
   if (name === "hour") return `${v}:00`;
-  if (name === "coded_account") return `${v} (${accountLabel(String(v))})`;
+  if (name === "coded_account") return accountLabel(String(v));
   return String(v);
 }
 

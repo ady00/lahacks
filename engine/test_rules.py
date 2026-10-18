@@ -101,9 +101,24 @@ P = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
 def test_dinner_breaks_two_rules_and_cites_facts():
     v = P.check(DINNER)
     assert v.status == "violation"
-    by = {x.rule: x.because for x in v.violations}
+    by = {x.rule: x.because for x in v.violations + v.notes}
     assert by["MEAL-client-80"] == ["amount", "attendees", "client_present", "expense_kind"]
     assert set(by["IRS-meal"]) == {"expense_kind", "at_company_event", "coded_account"}
+
+
+def test_irs_rules_are_notes_and_never_decide_the_verdict():
+    # company policy says yes to a $30 client meal even when the ledger coded it as travel: the IRS rule is a note
+    v = P.check({**DINNER, "amount": 30, "tip_over_20": False})
+    assert v.status == "compliant" and v.violations == [] and [x.rule for x in v.notes] == ["IRS-meal"]
+    assert set(v.notes[0].because) == {"expense_kind", "at_company_event", "coded_account"}
+    # over the standard mileage rate: allowed by company policy, noted by the IRS layer, nothing to fix
+    d = P.decide(dict(role="employee", expense_kind="mileage", miles=100, amount=80, hour=9, days_since_purchase=0,
+                      pre_approved=False, receipt_attached=True, commuting=False, rental_car=False, mileage_and_fuel=False), {})
+    assert d.verdict.status == "compliant" and [x.rule for x in d.verdict.notes] == ["IRS-mileage"] and d.fix == []
+    # a yes/no fact only the IRS layer reads is never asked
+    air = dict(role="employee", expense_kind="airfare", amount=400, booked_via_navan=True, days_before_travel=30,
+               pre_approved=False, receipt_attached=True, days_since_purchase=0, hour=9)
+    assert "companion_present" not in P.questions(air, {})
 
 def test_cheap_coded_dinner_is_proven_compliant():
     v = P.check({**DINNER, "amount": 30, "coded_account": "meals_50"})
@@ -115,7 +130,7 @@ def test_unknown_attendees_is_undetermined():
 
 def test_check_order_unknown_fact_and_applied_via_solver():
     v = P.check(DINNER)
-    assert [x.rule for x in v.violations] == ["MEAL-client-80", "IRS-meal"] and v.applied == []
+    assert [x.rule for x in v.violations] == ["MEAL-client-80"] and [x.rule for x in v.notes] == ["IRS-meal"] and v.applied == []
     assert P.check({}).status == "undetermined"
     with pytest.raises(KeyError): P.check({"colour": "red"})
     # attendees unknown, but $30 is under $80 a head for any headcount: compliant, applied through the solver
@@ -134,11 +149,12 @@ def test_reviewer_check_cores_deterministic_and_joint_shortcut_matches_naive():
         eqs = {n: p.vars[n] == to_z3(n, v) for n, v in facts.items()}
         out = []
         for r in p.rules:
+            if r.layer == "irs": continue  # IRS rules are notes, never the verdict
             s = z3.Solver(); s.set(unsat_core=True); s.set("core.minimize", True); s.add(*p.dom, r.formula)
             for n, e in eqs.items(): s.assert_and_track(e, z3.Bool(f"fact_{n}"))
             if s.check() == z3.unsat: out.append((r.id, set(str(b)[5:] for b in s.unsat_core())))
         if out: return "violation", out
-        s = z3.Solver(); s.add(*p.dom, *eqs.values(), z3.Not(p.all_formulas))
+        s = z3.Solver(); s.add(*p.dom, *eqs.values(), z3.Not(p.primary_formulas))
         return ("undetermined" if s.check() == z3.sat else "compliant"), []
 
     rng = random.Random(7)
@@ -162,12 +178,13 @@ def test_reviewer_check_combination_only_and_out_of_domain():
     assert v.status == "undetermined" and v.violations == []
     # a value outside its domain makes every rule unsat, citing that fact (why the API must 422 first)
     v = P.check({**DINNER, "hour": 99})
-    assert v.status == "violation" and [x.rule for x in v.violations] == [r.id for r in P.rules]
-    assert all(x.because == ["hour"] for x in v.violations)
+    assert v.status == "violation" and [x.rule for x in v.violations] == [r.id for r in P.rules if r.layer != "irs"]
+    assert [x.rule for x in v.notes] == [r.id for r in P.rules if r.layer == "irs"]
+    assert all(x.because == ["hour"] for x in v.violations + v.notes)
 
 
 def test_reviewer_check_empty_policy_and_amount_threshold():
-    assert Policy([]).check(DINNER) == ("compliant", [], [])
+    assert Policy([]).check(DINNER) == ("compliant", [], [], [])
     v = P.check({**DINNER, "amount": 160, "coded_account": "meals_50"})  # exactly $80 a head for two
     assert v.status == "compliant" and "GEN-5000" not in v.applied
     v = P.check({**DINNER, "amount": 160.01, "coded_account": "meals_50"})
@@ -294,7 +311,7 @@ ENT = dict(role="employee", expense_kind="books", amount=75, hour=20, days_since
 DEVICE = dict(ENT, expense_kind="personal_device", coded_account="office")
 
 def test_fix_for_the_dinner_is_amount_then_recode():
-    assert P.fix(DINNER) == [FixStep("amount", 200, 160.0), FixStep("coded_account", "travel", "meals_50")]
+    assert P.fix(DINNER) == [FixStep("amount", 200, 160.0)]  # the wrong account is an IRS note, not a company violation
 
 def test_no_fix_when_only_immutable_facts_are_wrong():
     assert P.fix(DEVICE) is None
@@ -311,10 +328,10 @@ def test_fix_open_bound_amount_is_whole_cents_and_plain_python():
 def test_fix_in_decide_and_unknowns_never_reported():
     d = P.decide(ENT, {})
     assert d.verdict.status == "violation" and d.fix == [FixStep("amount", 75, 60.0)]
-    assert P.decide({**DINNER, "amount": 30}, {}).fix == [FixStep("coded_account", "travel", "meals_50")]
+    assert P.decide({**DINNER, "amount": 30}, {}).fix == []  # compliant with an IRS note; nothing to fix
     assert P.decide({k: v for k, v in DEVICE.items() if k != "coded_account"}, {}).fix is None
     f = {k: v for k, v in DINNER.items() if k != "pre_approved"}  # pre_approved unknown: free, not a step
-    assert P.fix(f) == [FixStep("amount", 200, 160.0), FixStep("coded_account", "travel", "meals_50")]
+    assert P.fix(f) == [FixStep("amount", 200, 160.0)]
 
 
 # reviewer edge cases (Task 5)
@@ -358,13 +375,14 @@ def test_one_model_check_matches_per_rule_solver_reference():
         def sat(*c):
             s = z3.Solver(); s.add(*p.dom, *eqs.values(), *c); return s.check() == z3.sat
         out = []
-        for r in p.rules:
+        company = [r for r in p.rules if r.layer != "irs"]  # IRS rules are notes, never the verdict
+        for r in company:
             s = z3.Solver(); s.set(unsat_core=True); s.set("core.minimize", True); s.add(*p.dom, r.formula)
             for n, e in eqs.items(): s.assert_and_track(e, z3.Bool(f"fact_{n}"))
             if s.check() == z3.unsat: out.append((r.id, sorted(str(b).removeprefix("fact_") for b in s.unsat_core())))
         if out: return ("violation", out, [])
-        if sat(z3.Not(p.all_formulas)): return ("undetermined", [], [])
-        return ("compliant", [], [r.id for r in p.rules if not sat(z3.Not(r.when))])
+        if sat(z3.Not(p.primary_formulas)): return ("undetermined", [], [])
+        return ("compliant", [], [r.id for r in company if not sat(z3.Not(r.when))])
 
     pick = {"amount": [5, 20, 48, 50, 50.01, 60, 61, 74.99, 75, 80, 81, 100, 101, 120, 121, 150, 151, 160, 161, 300, 301, 500, 501, 1500, 1501, 5000, 5001],
             "hour": [0, 5, 6, 12, 21, 22, 23], "days_since_purchase": [0, 1, 14, 15, 60, 61, 75, 90, 91],
@@ -386,5 +404,5 @@ def test_one_model_check_matches_per_rule_solver_reference():
                 f["coded_account"] = "meals_100" if f["expense_kind"] == "meal" and f.get("at_company_event") else CODE[f["expense_kind"]]
         v = P.check(f)
         seen[v.status] += 1
-        assert (v.status, [(x.rule, x.because) for x in v.violations], v.applied) == reference(P, f), f
+        assert (v.status, [(x.rule, x.because) for x in v.violations], [a for a in v.applied if P.by_id[a].layer != "irs"]) == reference(P, f), f
     assert min(seen.values()) >= 30, seen

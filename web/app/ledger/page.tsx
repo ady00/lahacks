@@ -103,7 +103,10 @@ export default async function LedgerPage() {
                 <td className="px-3.5 py-2.5">{t.qb_category}</td>
                 <td className="px-3.5 py-2.5 font-mono text-xs">{t.coded_account}</td>
                 <td className="px-3.5 py-2.5 align-top"><Verdict t={t} /></td>
-                <td className="px-3.5 py-2.5 font-mono text-xs">{t.violations.length ? t.violations.join(", ") : <span className={muted}>none</span>}</td>
+                <td className="px-3.5 py-2.5 font-mono text-xs">
+                  {t.violations.length ? t.violations.join(", ") : <span className={muted}>none</span>}
+                  {t.notes.length > 0 && <div className="text-[#B45309]">{`IRS: ${t.notes.join(", ")}`}</div>}
+                </td>
               </tr>
             ))}
           </tbody>

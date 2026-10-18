@@ -22,11 +22,13 @@ def test_ledger_audit_counts_and_caches(client):
     conn = db.connect()
     _seed(conn)
     a = client.post("/ledger/audit", json={"company": "demo"}).json()
-    assert a["n"] == 3 and a["by_verdict"] == {"compliant": 1, "violation": 1, "undetermined": 1}
-    assert {r["rule"] for r in a["by_rule"]} == {"IRS-meal"}
+    assert a["n"] == 3 and a["by_verdict"] == {"compliant": 1, "violation": 0, "undetermined": 2}
+    assert {r["rule"] for r in a["by_rule"]} == {"IRS-meal"}  # the miscoded Nobu dinner: an IRS note counted in the audit
     assert conn.execute("select count(*) from verdicts").fetchone()[0] == 3
-    r = client.get("/ledger", params={"company": "demo", "verdict": "violation"})
-    assert "x-stub" not in r.headers and r.json()["total"] == 1 and r.json()["transactions"][0]["txn_id"] == "t2"
+    r = client.get("/ledger", params={"company": "demo", "verdict": "undetermined"})
+    assert "x-stub" not in r.headers and r.json()["total"] == 2
+    t2 = next(t for t in r.json()["transactions"] if t["txn_id"] == "t2")
+    assert t2["violations"] == [] and t2["notes"] == ["IRS-meal"]
     assert [t["txn_id"] for t in client.get("/ledger").json()["transactions"]] == ["t3", "t1", "t2"]  # newest first
 
 
@@ -69,7 +71,7 @@ def test_one_bad_row_does_not_abort(client, monkeypatch):
         return real(txn, *a)
     monkeypatch.setattr(cases, "decide_transaction", boom)
     a = client.post("/ledger/audit", json={"company": "demo"}).json()
-    assert a["n"] == 3 and a["by_verdict"]["undetermined"] == 2
+    assert a["n"] == 3 and a["by_verdict"]["undetermined"] == 3
     row = next(r for r in client.get("/ledger", params={"verdict": "undetermined"}).json()["transactions"] if r["txn_id"] == "t1")
     assert row["case"]["explanation"] == "Could not evaluate: bad row"
 

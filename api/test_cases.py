@@ -86,7 +86,7 @@ def test_decide_transaction_takes_a_raw_csv_row():
            "receipt_attached": "1", "receipt_date": "2026-09-21", "source": "intuit"}
     ext = {"expense_kind": {"value": "meal", "p": 0.95}, "client_present": {"p": 0.5}, "at_company_event": {"p": 0.05}}
     c = cases.decide_transaction(row, ext, False, {"role": "employee"})
-    assert c["verdict"] == "violation" and {"IRS-meal"} <= {v["rule"] for v in c["violations"]}
+    assert c["violations"] == [] and [n["rule"] for n in c["irs_notes"]] == ["IRS-meal"]  # miscoded: an IRS note, not a verdict
     assert c["facts"]["days_since_purchase"]["value"] == 1 and c["facts"]["coded_account"]["source"] == "ledger"
     u = cases.decide_transaction({**row, "receipt_attached": "", "timestamp": "2026-09-20"}, None, False, None)
     assert "receipt_attached" not in u["facts"] and "hour" not in u["facts"] and "role" not in u["facts"]
@@ -180,3 +180,17 @@ def test_ledger_row_falls_back_to_the_keyword_reading_for_facts_the_stored_extra
     c = decide_transaction(row, {"expense_kind": {"value": "rideshare", "p": 1.0}, "at_company_event": {"p": 0.05}, "client_present": {"p": 0.05}}, False, None)
     assert c["facts"]["commuting"] == {"value": False, "source": "text", "p": 0.1}
     assert c["facts"]["expense_kind"]["source"] == "jev" and "commuting" not in [q["fact"] for q in c["questions"]]
+
+
+def test_irs_rules_annotate_a_case_but_never_decide_it(client, monkeypatch):
+    from api import cases
+    monkeypatch.setattr(cases, "extract", lambda text: {"expense_kind": {"value": "mileage", "p": 0.99}, "commuting": {"p": 0.05},
+                                                         "rental_car": {"p": 0.05}, "mileage_and_fuel": {"p": 0.05},
+                                                         "client_present": {"p": 0.05}, "at_company_event": {"p": 0.05}, "traveling": {"p": 0.9}})
+    c = client.post("/check", json={"text": "Drove 120 miles to the client site, $95", "employee_id": "e_newhire"}).json()
+    assert c["verdict"] == "compliant" and c["violations"] == [] and c["fix"] == [] and c["questions"] == []
+    assert [n["rule"] for n in c["irs_notes"]] == ["IRS-mileage"] and c["irs_notes"][0]["layer"] == "irs"
+    assert set(c["irs_notes"][0]["because"]) == {"amount", "expense_kind", "miles"}
+    assert c["facts"]["miles"] == {"value": 120, "source": "text", "p": None} and c["facts"]["coded_account"]["value"] == "travel"
+    assert "IRS note" in c["explanation"] and "IRS-mileage" in c["explanation"]
+    assert client.post(f"/cases/{c['case_id']}/authorize").status_code == 200  # company policy allows it, so the card is issued

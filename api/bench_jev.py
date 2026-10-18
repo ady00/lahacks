@@ -62,6 +62,7 @@ CASES = [
     ("Books for the onboarding library, $90", "other", False, False),
     ("Visa application fee for the London trip, $120", "other", False, False),
     ("Can I expense $45 of office supplies from Amazon?", "other", False, False),
+    ("Can I buy a halloween costume for office party", "other", False, True),
 ]
 
 

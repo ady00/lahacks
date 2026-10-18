@@ -153,6 +153,8 @@ Six more shapes cover everything that is not a case. Field names are final; `/do
 
 `GET /policy/irs` runs the IRS layer's self-test with Z3 on every call and returns `{enabled, policy_version, rules, audit, summary}`. Each entry of `rules` is the raw rule (`id, layer, text, cite, url, when, require`) plus `facts_used`, `prohibition` (require is `false`), `breaks` and `holds` (witnesses: `{facts, verdict, violations, because, applied, also}`, where `facts` is a full fact map Z3 built, `because` maps rule → unsat core, `also` lists other rules the breaker unavoidably trips; `holds` is null for a prohibition), `implied_by` (company rule ids that already force it, `[]` when only the IRS layer catches it) and `ms`. `audit` is the dead/conflicts check restricted to IRS rules; `summary` is `{rules, implied_by_company, irs_only, prohibitions}`. The report covers the full pack even while the layer is off.
 
+IRS rules never decide a case. A case's `verdict`, `violations`, `fix` and `questions` come from the company layer; IRS rules that are not met appear in `irs_notes` (same shape as `violations`) and the derived `coded_account` and `deductible` facts carry the coding. A ledger row has `notes` (rule ids) beside `violations`, and the audit's `by_rule` counts both.
+
 `POST /policy/layers` with `{"irs": false}` swaps the live policy to the company layer plus dashboard rules (a new `version`; `/health` follows); `{"irs": true}` restores it. In memory only: a restart turns the layer back on.
 
 **Bank-rule check** (`POST /bank-rules/check`). Input is QuickBooks' own model: description contains every word, amount in a range, assign a category, first match in list order wins.

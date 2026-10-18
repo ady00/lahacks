@@ -51,7 +51,8 @@ def _row(r) -> dict:
                ("txn_id", "company", "employee_id", "vendor", "memo", "timestamp", "qb_category")},
             "amount": r["amount"],
             "coded_account": r["coded_account"] or cases.coded_account_for(r["qb_category"] or ""),
-            "verdict": r["verdict"], "violations": [v["rule"] for v in case["violations"]], "case": case}
+            "verdict": r["verdict"], "violations": [v["rule"] for v in case["violations"]],
+            "notes": [v["rule"] for v in case.get("irs_notes", [])], "case": case}
 
 
 def rows(conn, company, verdict, limit, offset, policy_version) -> tuple[list[dict], int]:
@@ -89,12 +90,11 @@ def audit(conn, company, policy, by_id) -> dict:
     counts = dict(conn.execute(f"SELECT v.verdict, COUNT(*) {_FROM} WHERE 1=1{where} GROUP BY v.verdict", (pv, *args)).fetchall())
     by_verdict = {k: counts.get(k, 0) for k in ("compliant", "violation", "undetermined")}
     rule_n, top = {}, []
-    where, args = _scope(company, "violation")
     for r in conn.execute(f"SELECT t.*, v.verdict, v.case_json {_FROM} WHERE 1=1{where} ORDER BY t.rowid", (pv, *args)):
         row = _row(r)
-        if len(top) < 20:
+        if row["verdict"] == "violation" and len(top) < 20:
             top.append(row)
-        for rid in set(row["violations"]):
+        for rid in set(row["violations"] + row["notes"]):  # company violations and IRS notes both count per rule
             rule_n[rid] = rule_n.get(rid, 0) + 1
     by_rule = [{"rule": rid, "text": by_id[rid].text if rid in by_id else "", "count": n}
                for rid, n in sorted(rule_n.items(), key=lambda kv: (-kv[1], kv[0]))]

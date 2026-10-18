@@ -564,6 +564,11 @@ export interface components {
             };
             /** Violations */
             violations: components["schemas"]["Violation"][];
+            /**
+             * Irs Notes
+             * @default []
+             */
+            irs_notes: components["schemas"]["Violation"][];
             /** Applied */
             applied: string[];
             /** Fix */
@@ -840,6 +845,11 @@ export interface components {
             verdict: "compliant" | "violation" | "undetermined";
             /** Violations */
             violations: string[];
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
             case: components["schemas"]["Case"] | null;
         };
         /** Overlap */

@@ -190,6 +190,8 @@ def to_case(case_id, created_at, employee_id, text, decision, sources, probs, ap
         "policy_version": POLICY.version, "verdict": v.status, "facts": facts,
         "violations": [{"rule": x.rule, "layer": POLICY.by_id[x.rule].layer, "text": POLICY.by_id[x.rule].text,
                         "because": x.because} for x in v.violations],
+        "irs_notes": [{"rule": x.rule, "layer": POLICY.by_id[x.rule].layer, "text": POLICY.by_id[x.rule].text,
+                       "because": x.because} for x in v.notes],
         "applied": list(v.applied), "fix": fix, "questions": questions,
         "explanation": explain(decision, POLICY.by_id, unknown),
         "awaiting_approval": v.status == "violation" and any(s.fact == "pre_approved" for s in decision.fix or [])

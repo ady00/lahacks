@@ -45,9 +45,10 @@ class Violation(NamedTuple):
 
 
 class Verdict(NamedTuple):
-    status: Literal["compliant", "violation", "undetermined"]
+    status: Literal["compliant", "violation", "undetermined"]  # decided by the company layer alone
     violations: list[Violation]
     applied: list[str]
+    notes: list[Violation] = []  # IRS rules not met: reported, never part of the verdict
 
 
 class FixStep(NamedTuple):
@@ -187,6 +188,11 @@ class Policy:
         self.formula_names = [w | _names(r["require"]) for w, r in zip(self.when_names, rules)]
         self.track = {n: z3.Bool(f"fact_{n}") for n in FACTS}
         self.all_formulas = z3.And(*[r.formula for r in self.rules])
+        # the company layer decides the verdict; the IRS layer only annotates (notes, derived coding)
+        self.primary = [i for i, r in enumerate(self.rules) if r.layer != "irs"]
+        self.secondary = [i for i, r in enumerate(self.rules) if r.layer == "irs"]
+        self.primary_formulas = z3.And(*[self.rules[i].formula for i in self.primary])
+        self.secondary_formulas = z3.And(*[self.rules[i].formula for i in self.secondary])
         self.version = hashlib.sha256(json.dumps(rules, sort_keys=True).encode()).hexdigest()[:12]
 
     def facts_eq(self, facts: dict) -> dict[str, z3.BoolRef]:
@@ -203,13 +209,20 @@ class Policy:
         eqs = self._facts_eq(facts)
         s = z3.Solver()
         s.add(*self.dom, *eqs.values())
+        status, violations, applied = self._layer(s, eqs, facts, self.primary, self.primary_formulas)
+        _, notes, irs_applied = self._layer(s, eqs, facts, self.secondary, self.secondary_formulas)
+        return Verdict(status, violations, applied + (irs_applied if status == "compliant" else []), notes)
+
+    def _layer(self, s: z3.Solver, eqs: dict, facts: dict, idx: list[int], conj: z3.BoolRef) -> tuple:
+        """The spec's algorithm over one layer's rules -> (status, violations, applied). Under ENGINE_LOCK."""
         # One model fixing the known facts: a rule whose facts are all known is decided by eval, no solver.
         # Joint check first: sat means no rule is violated on its own, so the per-rule loop is skipped.
-        joint = s.check(self.all_formulas) == z3.sat
+        joint = s.check(conj) == z3.sat
         m = s.model() if joint or s.check() == z3.sat else None  # None: a known fact is outside its domain
         if not joint:
             violations = []
-            for r, names in zip(self.rules, self.formula_names):
+            for i in idx:
+                r, names = self.rules[i], self.formula_names[i]
                 if m is not None and names <= facts.keys():
                     holds = z3.is_true(m.eval(r.formula, model_completion=True))
                 else:
@@ -226,15 +239,16 @@ class Policy:
                 c.check()
                 violations.append(Violation(r.id, sorted(str(b).removeprefix("fact_") for b in c.unsat_core())))
             if violations:
-                return Verdict("violation", violations, [])
-        if s.check(z3.Not(self.all_formulas)) == z3.sat:
-            return Verdict("undetermined", [], [])
+                return "violation", violations, []
+        if s.check(z3.Not(conj)) == z3.sat:
+            return "undetermined", [], []
         applied = []
-        for r, names in zip(self.rules, self.when_names):
+        for i in idx:
+            r, names = self.rules[i], self.when_names[i]
             if (z3.is_true(m.eval(r.when, model_completion=True)) if m is not None and names <= facts.keys()
                     else s.check(z3.Not(r.when)) == z3.unsat):
                 applied.append(r.id)
-        return Verdict("compliant", [], applied)
+        return "compliant", [], applied
 
     def required_values(self, facts: dict, fact: str) -> list[str]:
         return _locked(self._required_values, facts, fact)
@@ -275,10 +289,9 @@ class Policy:
         return _locked(self._questions, facts, probs)
 
     def _questions(self, facts: dict, probs: dict[str, dict]) -> list[str]:
-        def outcome(f):
-            rf, _ = self._resolve(f)
-            v = self._check(rf)
-            return v.status, {x.rule for x in v.violations}, {n: rf.get(n) for n, s in FACTS.items() if s.derived}
+        def outcome(f):  # the company layer's answer only: a fact that moves just the tax coding is never asked
+            v = self._check(self._resolve(f)[0])
+            return v.status, {x.rule for x in v.violations}
 
         asked = [n for n, s in FACTS.items() if s.kind == "bool" and n not in facts
                  and outcome({**facts, n: True}) != outcome({**facts, n: False})]
@@ -288,8 +301,8 @@ class Policy:
             return abs((0.5 if p is None else p) - 0.5)
         # then the unknown numbers and choices some still-open rule reads (no yes/no flip test for those): schema order
         eqs = list(self._facts_eq(facts).values())
-        open_names = set().union(*(names for r, names in zip(self.rules, self.formula_names)
-                                   if _sat(*self.dom, *eqs, z3.Not(r.formula))))
+        open_names = set().union(*(self.formula_names[i] for i in self.primary
+                                   if _sat(*self.dom, *eqs, z3.Not(self.rules[i].formula))))
         numeric = [n for n, s in FACTS.items() if s.kind != "bool" and not s.derived and n not in facts and n in open_names]
         return sorted(asked, key=doubt) + numeric
 
@@ -298,7 +311,7 @@ class Policy:
 
     def _fix(self, facts: dict) -> list[FixStep] | None:
         eqs = self._facts_eq(facts)
-        hard = [*self.dom, *[r.formula for r in self.rules]] + [eqs[n] for n in facts if not FACTS[n].mutable]
+        hard = [*self.dom, *[self.rules[i].formula for i in self.primary]] + [eqs[n] for n in facts if not FACTS[n].mutable]
         mutable = [n for n in FACTS if n in facts and FACTS[n].mutable]  # unknown facts stay free
         o = z3.Optimize()
         o.add(*hard)
@@ -417,9 +430,10 @@ class Policy:
     def _witness(self, rule_id: str, model: z3.ModelRef) -> dict:
         facts = self._facts_from_model(model)
         v = self._check(facts)
-        return {"facts": facts, "verdict": v.status, "violations": [x.rule for x in v.violations],
-                "because": {x.rule: x.because for x in v.violations}, "applied": list(v.applied),
-                "also": [x.rule for x in v.violations if x.rule != rule_id]}
+        fired = v.violations + v.notes  # an IRS rule fires as a note; the witness lists both kinds
+        return {"facts": facts, "verdict": v.status, "violations": [x.rule for x in fired],
+                "because": {x.rule: x.because for x in fired}, "applied": list(v.applied),
+                "also": [x.rule for x in fired if x.rule != rule_id]}
 
     def disagreement(self, rule_a: dict, rule_b: dict) -> dict | None:
         return _locked(self._disagreement, rule_a, rule_b)

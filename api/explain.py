@@ -187,4 +187,6 @@ def explain(decision, by_id: dict, unknown: list[str]) -> str:
         out.append("Depends on: " + (QUESTION_TEXT.get(first, f"What is {first}?") if first else "a fact we don't know yet."))
     out += [f"{facts[f]} deductible ({rid})." if f == "deductible" else f"Post it as {facts[f]} ({rid})."
             for f, rid in decision.derived.items()]
+    for x in v.notes:
+        out.append(f"IRS note: {by_id[x.rule].text.rstrip('.')} ({x.rule}): {', '.join(phrase(f, facts.get(f)) for f in x.because)}.")
     return " ".join(out)

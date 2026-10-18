@@ -36,7 +36,7 @@ QUESTIONS = {  # the first three were tuned on api/bench_jev.py (45/45 kinds on 
         "business_cards": "Business cards.",
         "dry_cleaning": "Dry cleaning or laundry during a trip.",
         "visa": "A travel visa, travel permit or Covid test.",
-        "other": "Anything else: marketing spend, fees.",
+        "other": "Anything else, including clothing, costumes, party supplies and decorations, marketing spend and fees.",
     }},
     "client_present": {"type": "noul", "instructions":
         "Answer yes if a client, customer, partner, prospect or investor joined the employee at this meal, event or entertainment: for example a dinner with a client's CFO, drinks with prospects, a game, concert or golf with a customer or a client's team. Answer no for travel, lodging or rides to visit a client, for purchases with only coworkers or the employee alone, for outings with a spouse, romantic partner, family or friends, and for goods, software or fees."},

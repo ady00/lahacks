@@ -108,6 +108,7 @@ class Case(_M):
     verdict: Verdict
     facts: dict[str, Fact]
     violations: list[Violation]
+    irs_notes: list[Violation] = []  # IRS rules not met; reported, never part of the verdict
     applied: list[str]
     fix: list[FixStep] | None
     questions: list[Question]
@@ -135,6 +136,7 @@ class LedgerRow(_M):
     coded_account: str
     verdict: Verdict
     violations: list[str]
+    notes: list[str] = []  # IRS rules not met (ids); never part of the verdict
     case: Case | None
 
 

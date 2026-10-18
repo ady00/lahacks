@@ -37,13 +37,18 @@ export function CaseCard({ c }: { c: Case }) {
 
       <p className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3.5 text-sm transition-colors hover:border-[#CBD5E1]">{c.explanation}</p>
 
-      {(c.facts.coded_account || c.facts.deductible) && (
-        <a href="/irs" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[#CCFBF1] bg-[#F0FDFA] px-3.5 py-2.5 text-sm text-[#0F766E] transition-colors hover:border-[#5EEAD4]">
-          <span className="text-[11px] font-bold uppercase tracking-[0.06em]">Tax treatment</span>
-          {c.facts.coded_account && <span className="font-medium">{valueText("coded_account", c.facts.coded_account.value)}</span>}
-          {c.facts.deductible && <span className="font-medium">{`${c.facts.deductible.value} deductible`}</span>}
-          <span className="ml-auto text-xs text-[#0D9488]">derived by the IRS layer, not entered by anyone →</span>
-        </a>
+      {(c.facts.coded_account || c.facts.deductible || c.irs_notes.length > 0) && (
+        <section className="space-y-1 rounded-lg border border-[#CCFBF1] bg-[#F0FDFA] px-3.5 py-2.5 text-sm text-[#0F766E]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-[11px] font-bold uppercase tracking-[0.06em]">Tax treatment</span>
+            {c.facts.coded_account && <span className="font-medium">{`Posts to ${valueText("coded_account", c.facts.coded_account.value)}`}</span>}
+            {c.facts.deductible && <span className="font-medium">{`${c.facts.deductible.value} deductible`}</span>}
+            <a href="/irs" className="ml-auto text-xs text-[#0D9488] hover:underline">What this means →</a>
+          </div>
+          {c.irs_notes.map((n) => (
+            <p key={n.rule} className="text-xs text-[#B45309]">{`IRS note · ${n.rule}: ${n.text}`}</p>
+          ))}
+        </section>
       )}
 
       {c.approval && (

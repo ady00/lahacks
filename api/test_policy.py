@@ -88,7 +88,7 @@ def test_irs_report_proves_every_statutory_rule_both_ways(client):
     assert [x["id"] for x in j["rules"]] == [x["id"] for x in irs] and len(irs) >= 13
     for x in j["rules"]:
         assert x["cite"] and x["url"].startswith("https://") and x["text"] and x["when"] is not None
-        assert x["breaks"]["verdict"] == "violation" and x["id"] in x["breaks"]["violations"] and x["ms"] >= 0
+        assert x["id"] in x["breaks"]["violations"] and x["ms"] >= 0  # fires as a note; the verdict is company policy's
         assert x["holds"] is None if x["prohibition"] else x["holds"]["verdict"] == "compliant"
     by = {x["id"]: x for x in j["rules"]}
     assert by["IRS-receipt-75"]["implied_by"] == ["GEN-receipt"] and by["IRS-commute"]["prohibition"] is True

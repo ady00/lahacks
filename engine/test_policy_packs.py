@@ -70,10 +70,15 @@ def test_base_is_compliant():
     assert P.check(BASE).status == "compliant"
 
 
+def hits(v):
+    """Company violations and IRS notes together: the rule fired either way."""
+    return {x.rule for x in v.violations} | {x.rule for x in v.notes}
+
+
 @pytest.mark.parametrize("rule_id,breaking,passing", CASES)
 def test_each_rule_bites_and_releases(rule_id, breaking, passing):
-    assert rule_id in {v.rule for v in P.check(breaking).violations}
-    assert rule_id not in {v.rule for v in P.check(passing).violations}
+    assert rule_id in hits(P.check(breaking))
+    assert rule_id not in hits(P.check(passing))
 
 
 def test_every_rule_has_a_case():
@@ -109,8 +114,8 @@ def test_reviewer_threshold_edges_the_per_rule_cases_miss():
     three = dict(BASE, client_present=True, attendees=3)
     assert "MEAL-client-80" in {v.rule for v in P.check(dict(three, amount=240.01)).violations}
     assert "MEAL-client-80" not in {v.rule for v in P.check(dict(three, amount=240)).violations}
-    assert "IRS-receipt-60" in {v.rule for v in P.check(dict(BASE, days_since_purchase=61, receipt_attached=False)).violations}
-    assert "IRS-receipt-60" not in {v.rule for v in P.check(dict(BASE, days_since_purchase=60, receipt_attached=False)).violations}
+    assert "IRS-receipt-60" in hits(P.check(dict(BASE, days_since_purchase=61, receipt_attached=False)))
+    assert "IRS-receipt-60" not in hits(P.check(dict(BASE, days_since_purchase=60, receipt_attached=False)))
 
 
 def test_reviewer_facts_from_model_audit_repeat_and_empty_policy():
@@ -147,7 +152,7 @@ def test_selftest_builds_a_breaking_and_a_holding_purchase_for_every_irs_rule():
     assert [r["id"] for r in out] == [r.id for r in P.rules if r.layer == "irs"] and len(out) == 13
     assert [r["id"] for r in out if r["prohibition"]] == ["IRS-commute"]
     for r in out:
-        assert r["breaks"]["verdict"] == "violation" and r["id"] in r["breaks"]["violations"]
+        assert r["id"] in r["breaks"]["violations"]  # an IRS rule fires as a note; the verdict stays company policy's
         assert set(r["breaks"]["facts"]) == set(FACTS)
         if r["prohibition"]:  # IRS-commute: when its condition holds the purchase is simply not allowed
             assert r["holds"] is None
