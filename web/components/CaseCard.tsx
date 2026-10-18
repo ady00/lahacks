@@ -1,5 +1,5 @@
 import type { Case } from "@/lib/types";
-import { fixLine, pct } from "@/lib/format";
+import { fixLine, pct, usd } from "@/lib/format";
 import { VerdictChip } from "./VerdictChip";
 
 const muted = "text-zinc-500 dark:text-zinc-400";
@@ -20,6 +20,21 @@ export function CaseCard({ c }: { c: Case }) {
 
       {c.awaiting_approval && (
         <p className="rounded bg-amber-100 px-3 py-2 text-sm text-amber-800">Waiting for manager approval</p>
+      )}
+
+      {c.approval && (
+        <p className={`rounded px-3 py-2 text-sm ${c.approval.approved ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+          {`${c.approval.approved ? "Approved" : "Rejected"} by ${c.approval.approver} at ${c.approval.at}`}
+        </p>
+      )}
+
+      {c.authorization && (
+        <section className="rounded-lg border border-green-300 bg-green-50 p-4 text-sm dark:border-green-800 dark:bg-green-950">
+          <h2 className="font-semibold">
+            {`Card authorized · limit ${usd(c.authorization.amount_limit)} · ${c.authorization.merchant_category} · expires ${c.authorization.expires_at}`}
+          </h2>
+          <p className="mt-1 break-all font-mono text-xs">{`proof ${c.authorization.proof_hash}`}</p>
+        </section>
       )}
 
       <section>

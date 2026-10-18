@@ -36,6 +36,18 @@ export async function POST(req: Request, ctx: RouteContext<"/act/[name]">) {
     }
     case "logout":
       return redirectTo(req, "/login", null);
+    case "answer": {
+      const id = str(f, "case_id");
+      const raw = str(f, "value");
+      const value = raw === "true" ? true : raw === "false" ? false : raw !== "" && !isNaN(Number(raw)) ? Number(raw) : raw;
+      await post(`/cases/${id}/answer`, { fact: str(f, "fact"), value });
+      return redirectTo(req, `/cases/${id}`);
+    }
+    case "authorize": {
+      const id = str(f, "case_id");
+      await post(`/cases/${id}/authorize`);
+      return redirectTo(req, `/cases/${id}`);
+    }
     default:
       return new Response("unknown action", { status: 404 });
   }
