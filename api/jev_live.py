@@ -80,6 +80,28 @@ QUESTIONS = {  # the first three were tuned on api/bench_jev.py (45/45 kinds on 
         "Answer yes if the employee says they are on leave (parental, medical, sabbatical or other leave). Answer no otherwise."},
     "personal_travel": {"type": "noul", "instructions":
         "Answer yes if the expense happened during personal travel or a vacation rather than a business trip. Answer no otherwise."},
+    "multi_month_bill": {"type": "noul", "instructions":
+        "Answer yes if the bill or payment covers more than one month: paid yearly, quarterly or a year upfront. Answer no for a single month or a one-off purchase."},
+    "above_fair_price": {"type": "noul", "instructions":
+        "Answer yes only if the request says Navan flagged the fare, room or ticket as above its fair-market or dynamic policy price. Answer no otherwise."},
+    "collision_waiver": {"type": "noul", "instructions":
+        "Answer yes if the request mentions buying the collision damage waiver, CDW or damage insurance at the rental counter. Answer no otherwise."},
+    "hotel_extras": {"type": "noul", "instructions":
+        "Answer yes if the hotel bill includes movies, pay-per-view or the minibar. Answer no otherwise."},
+    "rail_pass": {"type": "noul", "instructions":
+        "Answer yes if the purchase is a monthly, yearly or season rail discount card or railcard. Answer no for a single train ticket."},
+    "beyond_50km": {"type": "noul", "instructions":
+        "Answer yes if the request says the co-working space is more than 50 km from the team member's home. Answer no otherwise."},
+    "non_dedicated_venue": {"type": "noul", "instructions":
+        "Answer yes if the co-working venue is a gym, country club, golf club, hotel, cafe or other place whose main business is not shared workspace. Answer no for WeWork and similar dedicated providers or when the venue is not named."},
+    "deposit_or_advance": {"type": "noul", "instructions":
+        "Answer yes if the payment is a security deposit or an advance payment for a co-working space. Answer no for the month's rent."},
+    "coworking_full_month": {"type": "noul", "instructions":
+        "Answer yes if the request says a full month of co-working is also being expensed this month. Answer no otherwise."},
+    "equipment_off_list": {"type": "noul", "instructions":
+        "Answer yes if the home-office item is outside the approved list (bookshelf, cabinet, other furniture, decor, appliances, a second desk). Answer no for a chair, desk, monitor, keyboard, mouse, webcam, headset, microphone, dock, cables, lamp, laptop stand or bag."},
+    "domain_name": {"type": "noul", "instructions":
+        "Answer yes if the purchase registers or renews an internet domain name or DNS. Answer no otherwise."},
 }
 
 

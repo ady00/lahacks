@@ -210,8 +210,8 @@ class Policy:
         s = z3.Solver()
         s.add(*self.dom, *eqs.values())
         status, violations, applied = self._layer(s, eqs, facts, self.primary, self.primary_formulas)
-        _, notes, irs_applied = self._layer(s, eqs, facts, self.secondary, self.secondary_formulas)
-        return Verdict(status, violations, applied + (irs_applied if status == "compliant" else []), notes)
+        _, notes, _ = self._layer(s, eqs, facts, self.secondary, self.secondary_formulas)
+        return Verdict(status, violations, applied, notes)  # applied: the company rules that make it compliant
 
     def _layer(self, s: z3.Solver, eqs: dict, facts: dict, idx: list[int], conj: z3.BoolRef) -> tuple:
         """The spec's algorithm over one layer's rules -> (status, violations, applied). Under ENGINE_LOCK."""

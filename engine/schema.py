@@ -59,6 +59,18 @@ FACTS: dict[str, FactSpec] = {
     "ap_approved": FactSpec("bool", None, None, None, True, 2, False),  # AP Admin approval (asked)
     "on_leave": FactSpec("bool", None, None, None, False, 0, False),
     "personal_travel": FactSpec("bool", None, None, None, False, 0, False),
+    # GitLab handbook, second pass (2026-10-18)
+    "multi_month_bill": FactSpec("bool", None, None, None, False, 0, False),  # the bill covers more than one month (paid yearly or quarterly)
+    "above_fair_price": FactSpec("bool", None, None, None, False, 0, False),  # Navan's dynamic policy flagged the fare or room as over 20% above fair market price
+    "collision_waiver": FactSpec("bool", None, None, None, False, 0, False),  # the collision damage waiver was bought at the rental counter
+    "hotel_extras": FactSpec("bool", None, None, None, False, 0, False),  # movies or the minibar are on the hotel bill
+    "rail_pass": FactSpec("bool", None, None, None, False, 0, False),  # a monthly or yearly rail discount card
+    "beyond_50km": FactSpec("bool", None, None, None, False, 0, False),  # the co-working space is more than 50 km from the team member's home
+    "non_dedicated_venue": FactSpec("bool", None, None, None, False, 0, False),  # the co-working venue is a gym, club, hotel, cafe or other non-dedicated space
+    "deposit_or_advance": FactSpec("bool", None, None, None, False, 0, False),  # a security deposit or advance payment for co-working
+    "coworking_full_month": FactSpec("bool", None, None, None, False, 0, False),  # a full month of co-working is expensed in the same month
+    "equipment_off_list": FactSpec("bool", None, None, None, False, 0, False),  # a home-office item outside the approved WFH equipment list
+    "domain_name": FactSpec("bool", None, None, None, False, 0, False),  # registering or renewing a GitLab-related domain name
 }
 
 

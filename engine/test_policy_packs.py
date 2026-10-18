@@ -8,12 +8,20 @@ P_RAW = json.load(open("engine/demo_policy.json")) + json.load(open("engine/irs_
 BASE = dict(role="employee", expense_kind="meal", client_present=False, at_company_event=False, traveling=True,
             government_present=False, round_trip=False, amount=20, hour=12, days_since_purchase=0, days_before_travel=30,
             tenure_days=400, attendees=1, nights=1, days=1, receipt_attached=True, pre_approved=True, approved_issue=True,
-            booked_via_navan=True, coded_account="meals_50", deductible="50%", companion_present=False, commuting=False, miles=1)
+            booked_via_navan=True, coded_account="meals_50", deductible="50%", companion_present=False, commuting=False, miles=1,
+            travel_class="economy", segment_hours=1, international=False, customer_trip=False, frequent_traveler=False, tall_traveler=False,
+            car_above_intermediate=False, rental_car=False, mileage_and_fuel=False, tip_over_20=False, cash_equivalent=False,
+            gift_occasion="life_event", includes_fees=False, whole_family_plan=False, ap_approved=True, on_leave=False, personal_travel=False,
+            multi_month_bill=False, above_fair_price=False, collision_waiver=False, hotel_extras=False, rail_pass=False, beyond_50km=False,
+            non_dedicated_venue=False, deposit_or_advance=False, coworking_full_month=False, equipment_off_list=False, domain_name=False)
 AIR = dict(BASE, expense_kind="airfare", coded_account="travel", pre_approved=False)
 LODGE = dict(BASE, expense_kind="lodging", coded_account="travel", pre_approved=False)
 RIDE = dict(BASE, expense_kind="rideshare", coded_account="travel", pre_approved=False)
 NET = dict(BASE, expense_kind="internet", coded_account="office")
 BOOK = dict(BASE, expense_kind="books", coded_account="other")
+TRAIN = dict(AIR, expense_kind="train")
+CAR = dict(AIR, expense_kind="car_rental")
+COWORK = dict(NET, expense_kind="coworking", days=3, amount=200)
 
 CASES = [
   ("GEN-receipt", dict(BASE, amount=51, days_since_purchase=1, receipt_attached=False), dict(BASE, amount=50, days_since_purchase=1, receipt_attached=False)),
@@ -49,6 +57,19 @@ CASES = [
   ("SHIP-100", dict(NET, expense_kind="shipping", amount=101, pre_approved=False), dict(NET, expense_kind="shipping", amount=100, pre_approved=False)),
   ("SW-no", dict(NET, expense_kind="software"), dict(NET, expense_kind="equipment")),
   ("SWAG-no", dict(BOOK, expense_kind="swag"), dict(BOOK, expense_kind="other")),
+  # GitLab handbook, second pass; the travel-class, fuel, tip, gift, bill and leave rules are in test_gitlab_details.py
+  ("PRICE-20", dict(AIR, above_fair_price=True), dict(AIR, above_fair_price=True, pre_approved=True)),
+  ("LODGE-navan-ap", dict(LODGE, booked_via_navan=False, pre_approved=True, ap_approved=False), dict(LODGE, booked_via_navan=False, pre_approved=True)),
+  ("LODGE-extras", dict(LODGE, hotel_extras=True), dict(LODGE)),
+  ("CAR-cdw", dict(CAR, collision_waiver=True), dict(CAR, collision_waiver=True, international=True)),
+  ("TRAIN-pass", dict(TRAIN, rail_pass=True), dict(TRAIN)),
+  ("COWORK-50km", dict(COWORK, traveling=False, beyond_50km=True), dict(COWORK, traveling=True, beyond_50km=True)),
+  ("COWORK-venue", dict(COWORK, non_dedicated_venue=True), dict(COWORK)),
+  ("COWORK-deposit", dict(COWORK, deposit_or_advance=True), dict(COWORK)),
+  ("NET-cowork", dict(NET, traveling=False, amount=80, coworking_full_month=True), dict(NET, traveling=False, amount=80)),
+  ("GEN-monthly", dict(NET, traveling=False, amount=80, multi_month_bill=True), dict(NET, traveling=False, amount=80)),
+  ("EQUIP-list", dict(NET, expense_kind="equipment", amount=400, equipment_off_list=True, pre_approved=False), dict(NET, expense_kind="equipment", amount=400, equipment_off_list=True)),
+  ("GEN-domain", dict(BOOK, expense_kind="other", domain_name=True), dict(BOOK, expense_kind="other")),
   ("IRS-meal", dict(BASE, coded_account="meals_100"), dict(BASE)),
   ("IRS-meal", dict(BASE, deductible="100%"), dict(BASE)),
   ("IRS-ent", dict(BASE, expense_kind="entertainment", coded_account="other"), dict(BASE, expense_kind="entertainment", coded_account="entertainment_0", deductible="0%")),
@@ -82,7 +103,8 @@ def test_each_rule_bites_and_releases(rule_id, breaking, passing):
 
 
 def test_every_rule_has_a_case():
-    assert {c[0] for c in CASES} == set(P.by_id) and len(P.rules) == 43
+    from engine.test_gitlab_details import CASES as DETAIL_CASES  # here, not at import: that module imports BASE from us
+    assert {c[0] for c in CASES} | {c[0] for c in DETAIL_CASES} == set(P.by_id) and len(P.rules) == len(P_RAW)
 
 
 def test_demo_policy_has_no_dead_rules_or_conflicts():
@@ -157,7 +179,7 @@ def test_selftest_builds_a_breaking_and_a_holding_purchase_for_every_irs_rule():
         if r["prohibition"]:  # IRS-commute: when its condition holds the purchase is simply not allowed
             assert r["holds"] is None
         else:
-            assert r["holds"]["verdict"] == "compliant" and r["id"] in r["holds"]["applied"] and set(r["holds"]["facts"]) == set(FACTS)
+            assert r["holds"]["verdict"] == "compliant" and r["id"] not in r["holds"]["violations"] and set(r["holds"]["facts"]) == set(FACTS)
         assert set(r["facts_used"]) <= set(FACTS) and r["ms"] >= 0
     json.dumps(out)  # plain Python all the way down
 

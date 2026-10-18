@@ -69,6 +69,17 @@ _FLAGS = {
     "personal_travel": r"personal trip|personal travel|vacation",
     "companion_present": r"spouse|wife|husband|my partner|kids?\b|family|girlfriend|boyfriend",
     "commuting": r"commut|home to (the )?office|office to home|from home to work|to work\b",
+    "multi_month_bill": r"annual|yearly|a year|12 months|quarterly|year upfront|per year",
+    "above_fair_price": r"fair[- ]market|dynamic policy|above (the )?policy price|flagged.*price",
+    "collision_waiver": r"collision damage|\bcdw\b|damage waiver|rental insurance",
+    "hotel_extras": r"minibar|mini-bar|mini bar|pay-per-view|in-room movie|movies?\b.*hotel|hotel.*movies?\b",
+    "rail_pass": r"railcard|rail pass|rail card|season ticket|monthly pass|annual pass|bahncard|ov-chipkaart",
+    "beyond_50km": r"(5[1-9]|[6-9]\d|\d{3,}) ?km",
+    "non_dedicated_venue": r"\bgym\b|golf club|country club|hotel lobby|cafe|café|coffee shop|hotel day pass",
+    "deposit_or_advance": r"deposit|advance payment|paid in advance|upfront for the space",
+    "coworking_full_month": r"full month of co-?working|monthly co-?working (membership|space)",
+    "equipment_off_list": r"bookshel|shelves|cabinet|filing cabinet|sofa|couch|rug|plant|decor|fridge|coffee machine|espresso|second desk|standing mat|air purifier|space heater|fan\b",
+    "domain_name": r"domain|\bdns\b|godaddy|namecheap|\.com\b.*regist|regist.*\.com\b",
 }
 
 

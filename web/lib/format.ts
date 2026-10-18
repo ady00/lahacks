@@ -58,6 +58,17 @@ const FACT_LABELS: Record<string, string> = {
   miles: "Miles",
   companion_present: "Spouse or family along",
   commuting: "Commuting",
+  multi_month_bill: "Bill covers several months",
+  above_fair_price: "Above Navan fair price",
+  collision_waiver: "Collision waiver bought",
+  hotel_extras: "Movies or minibar",
+  rail_pass: "Rail discount card",
+  beyond_50km: "Over 50 km from home",
+  non_dedicated_venue: "Non-dedicated venue",
+  deposit_or_advance: "Deposit or advance",
+  coworking_full_month: "Full month of co-working",
+  equipment_off_list: "Off the approved list",
+  domain_name: "Domain name",
 };
 export const factLabel = (name: string) => FACT_LABELS[name] ?? name;
 

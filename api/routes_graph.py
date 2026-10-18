@@ -32,6 +32,7 @@ LABEL = {
     "mileage_and_fuel": "Mileage and fuel both claimed", "tip_over_20": "Tip over 20%", "cash_equivalent": "Cash or gift card",
     "gift_occasion": "Gift occasion", "includes_fees": "Includes setup or hardware fees", "whole_family_plan": "Whole family plan",
     "ap_approved": "AP Admin approved", "on_leave": "On leave", "personal_travel": "Personal travel",
+    "multi_month_bill": "Bill covers several months", "above_fair_price": "Above Navan fair price", "collision_waiver": "Collision waiver bought", "hotel_extras": "Movies or minibar", "rail_pass": "Rail discount card", "beyond_50km": "Over 50 km from home", "non_dedicated_venue": "Non-dedicated venue", "deposit_or_advance": "Deposit or advance", "coworking_full_month": "Full month of co-working", "equipment_off_list": "Off the approved list", "domain_name": "Domain name",
 }
 _OPS = {"eq": "is", "neq": "is not", "gt": ">", "ge": "≥", "lt": "<", "le": "≤"}
 

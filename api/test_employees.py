@@ -28,7 +28,7 @@ def test_signup_defaults_start_date_to_today_and_rejects_bad_date(client):
 def test_tenure_fact_fires_probation_rule_for_new_hire_only(client, monkeypatch):
     from api import cases
     monkeypatch.setattr(cases, "extract", lambda text: {"expense_kind": {"value": "equipment", "p": 0.99},
-        "client_present": {"p": 0.05}, "at_company_event": {"p": 0.05}, "traveling": {"p": 0.05}})
+        "client_present": {"p": 0.05}, "at_company_event": {"p": 0.05}, "traveling": {"p": 0.05}, "equipment_off_list": {"p": 0.05}})
     new = client.post("/check", json={"text": "Monitor and a standing desk, $1,200", "employee_id": "e_newhire"}).json()
     assert new["facts"]["tenure_days"]["source"] == "employee" and new["facts"]["tenure_days"]["value"] < 365
     assert new["verdict"] == "compliant" and "EQUIP-1500" in new["applied"]   # first-year stipend covers it

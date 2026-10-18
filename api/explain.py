@@ -34,6 +34,17 @@ QUESTION_TEXT = {
     "whole_family_plan": "Does this cover a whole family plan rather than your own line?",
     "ap_approved": "Has AP Admin approved it?",
     "on_leave": "Are you on leave?",
+    "multi_month_bill": "Does the bill cover more than one month?",
+    "above_fair_price": "Did Navan flag the price as above fair market?",
+    "collision_waiver": "Was the collision damage waiver bought at the counter?",
+    "hotel_extras": "Are movies or the minibar on the bill?",
+    "rail_pass": "Is this a monthly or yearly rail card?",
+    "beyond_50km": "Is the space more than 50 km from home?",
+    "non_dedicated_venue": "Is the venue a gym, club, hotel or cafe rather than a co-working provider?",
+    "deposit_or_advance": "Is this a deposit or an advance payment?",
+    "coworking_full_month": "Are you expensing a full month of co-working this month?",
+    "equipment_off_list": "Is the item outside the approved home-office list?",
+    "domain_name": "Is this a domain name registration or renewal?",
     "personal_travel": "Is this during personal travel?",
 }
 

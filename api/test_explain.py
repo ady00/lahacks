@@ -7,7 +7,8 @@ from engine.rules import Decision, FixStep, Verdict, load_policy
 _E = Path(engine.__file__).parent
 P = load_policy(_E / "demo_policy.json", _E / "irs_pack.json")
 DINNER = dict(role="employee", expense_kind="meal", client_present=True, at_company_event=False, traveling=False,
-              government_present=False, amount=200, attendees=2, hour=19, days_since_purchase=0, pre_approved=False, coded_account="travel")
+              government_present=False, amount=200, attendees=2, hour=19, days_since_purchase=0, pre_approved=False, coded_account="travel",
+              tip_over_20=False)
 UNCODED = {k: v for k, v in DINNER.items() if k != "coded_account"}
 
 

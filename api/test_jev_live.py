@@ -5,7 +5,12 @@ import pytest
 
 from api import jev_live
 
+FIVE = {"expense_kind": {"value": "meal", "p": 0.97}, "client_present": {"p": 0.91}, "at_company_event": {"p": 0.08},
+        "traveling": {"p": 0.1}, "government_present": {"p": 0.02}}
+# every question gets an answer: the five the test checks, a quiet "no" for the other yes/no ones, the first choice for the rest
 OK = {"model": "jev-1.13.0", "usage": {"input_tokens": 1, "output_tokens": 2}, "answers": {
+    **{n: {"type": "noul", "noul": 0.02} for n, q in jev_live.QUESTIONS.items() if q["type"] == "noul"},
+    **{n: {"type": "choice", "choice": next(iter(q["criteria"])), "confidence": 0.5} for n, q in jev_live.QUESTIONS.items() if q["type"] == "choice"},
     "expense_kind": {"type": "choice", "choice": "meal", "confidence": 0.97, "probabilities": {"meal": 0.97}},
     "client_present": {"type": "noul", "noul": 0.91},
     "at_company_event": {"type": "noul", "noul": 0.08},
@@ -20,8 +25,8 @@ def _post(monkeypatch, status=200, body=OK):
 
 def test_shape(monkeypatch):
     _post(monkeypatch)
-    assert jev_live.extract("dinner") == {"expense_kind": {"value": "meal", "p": 0.97}, "client_present": {"p": 0.91},
-                                          "at_company_event": {"p": 0.08}, "traveling": {"p": 0.1}, "government_present": {"p": 0.02}}
+    facts = jev_live.extract("dinner")
+    assert {k: facts[k] for k in FIVE} == FIVE and set(facts) == set(jev_live.QUESTIONS)
     _, meta = jev_live.extract_with_meta("dinner")
     assert meta["model"] == "jev-1.13.0" and meta["usage"]["output_tokens"] == 2 and meta["latency_ms"] >= 0
 

@@ -62,7 +62,7 @@ def test_reviewer_round_trip_every_kind_and_empty_policy():
         s = z3.Solver(); s.add(p.vars[n] == to_z3(n, v)); assert s.check() == z3.sat
         assert from_z3(n, s.model().eval(p.vars[n], model_completion=True)) == v
     assert z3.simplify(to_z3("amount", 0.1) == z3.Q(1, 10))
-    assert list(FACTS)[:5] == ["role", "expense_kind", "coded_account", "deductible", "amount"] and list(FACTS)[-1] == "commuting"
+    assert list(FACTS)[:5] == ["role", "expense_kind", "coded_account", "deductible", "amount"] and list(FACTS)[-1] == "domain_name"
 
 def _bites(p, rid, **facts):
     s = z3.Solver(); s.add(*p.dom, p.by_id[rid].formula)
@@ -95,7 +95,7 @@ def test_reviewer_raw_version_unicode_and_threads():
 # a $200 client dinner for two (over GitLab's $80 a head), miscoded as travel
 DINNER = dict(role="employee", expense_kind="meal", client_present=True, at_company_event=False, traveling=False,
               government_present=False, amount=200, attendees=2, hour=19, days_since_purchase=0, pre_approved=False,
-              coded_account="travel", deductible="50%")
+              coded_account="travel", deductible="50%", tip_over_20=False)
 P = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
 
 def test_dinner_breaks_two_rules_and_cites_facts():
@@ -122,7 +122,7 @@ def test_irs_rules_are_notes_and_never_decide_the_verdict():
 
 def test_cheap_coded_dinner_is_proven_compliant():
     v = P.check({**DINNER, "amount": 30, "coded_account": "meals_50"})
-    assert v.status == "compliant" and {"IRS-meal", "MEAL-client-80"} <= set(v.applied) and "GEN-5000" not in v.applied
+    assert v.status == "compliant" and "MEAL-client-80" in v.applied and "IRS-meal" not in v.applied and "GEN-5000" not in v.applied
 
 def test_unknown_attendees_is_undetermined():
     f = {k: v for k, v in DINNER.items() if k != "attendees"}
@@ -135,7 +135,7 @@ def test_check_order_unknown_fact_and_applied_via_solver():
     with pytest.raises(KeyError): P.check({"colour": "red"})
     # attendees unknown, but $30 is under $80 a head for any headcount: compliant, applied through the solver
     v = P.check({**{k: x for k, x in DINNER.items() if k != "attendees"}, "amount": 30, "coded_account": "meals_50"})
-    assert v.status == "compliant" and "MEAL-client-80" in v.applied and "IRS-meal" in v.applied
+    assert v.status == "compliant" and "MEAL-client-80" in v.applied and "IRS-meal" not in v.applied  # only company rules make it compliant
     # hour unknown but its domain forces the condition: applied through the solver
     p = Policy([{"id": "h", "layer": "company", "text": "t", "when": {"ge": ["hour", 0]}, "require": True}])
     assert p.check({}).applied == ["h"]
@@ -172,10 +172,10 @@ def test_reviewer_check_cores_deterministic_and_joint_shortcut_matches_naive():
 
 
 def test_reviewer_check_combination_only_and_out_of_domain():
-    # each IRS meal rule is satisfiable alone (event unknown), but not jointly: undetermined, no violations
+    # event unknown: the IRS meal rules disagree on the coding, but they never decide, so company policy says compliant
     f = {k: v for k, v in DINNER.items() if k != "at_company_event"}
     v = P.check({**f, "amount": 20})
-    assert v.status == "undetermined" and v.violations == []
+    assert v.status == "compliant" and v.violations == []
     # a value outside its domain makes every rule unsat, citing that fact (why the API must 422 first)
     v = P.check({**DINNER, "hour": 99})
     assert v.status == "violation" and [x.rule for x in v.violations] == [r.id for r in P.rules if r.layer != "irs"]
@@ -229,7 +229,7 @@ def test_facts_from_probs_env_and_bad_entries(monkeypatch):
     assert facts_from_probs(probs) == {"client_present": True}
     assert facts_from_probs({"client_present": {"p": 0.85}, "at_company_event": {"p": 0.15}}, hi=0.9, lo=0.1) == {}
 
-UNCODED = {k: v for k, v in DINNER.items() if k != "coded_account"}
+UNCODED = {k: v for k, v in DINNER.items() if k not in ("coded_account", "deductible")}
 
 def test_required_account_for_a_client_dinner_is_meals_50():
     assert P.required_values(UNCODED, "coded_account") == ["meals_50"]
@@ -238,7 +238,7 @@ def test_required_account_for_a_client_dinner_is_meals_50():
 
 def test_resolve_sets_the_account_and_names_the_rule():
     facts, derived = P.resolve(UNCODED)
-    assert facts["coded_account"] == "meals_50" and derived == {"coded_account": "IRS-meal"}
+    assert facts["coded_account"] == "meals_50" and derived == {"coded_account": "IRS-meal", "deductible": "IRS-meal"}
 
 def test_resolve_leaves_ambiguous_and_given_accounts_alone():
     unknown_event = {k: v for k, v in UNCODED.items() if k != "at_company_event"}
@@ -265,7 +265,7 @@ def test_numeric_questions_follow_the_yes_no_ones():
 
 def test_decide_on_the_demo_dinner():
     d = P.decide(UNCODED, {})
-    assert d.facts["coded_account"] == "meals_50" and d.derived == {"coded_account": "IRS-meal"}
+    assert d.facts["coded_account"] == "meals_50" and d.derived == {"coded_account": "IRS-meal", "deductible": "IRS-meal"}
     assert d.verdict.status == "violation" and [v.rule for v in d.verdict.violations] == ["MEAL-client-80"]
     assert d.fix == [FixStep("amount", 200, 160.0)] and d.questions == []
 
@@ -387,7 +387,7 @@ def test_one_model_check_matches_per_rule_solver_reference():
     pick = {"amount": [5, 20, 48, 50, 50.01, 60, 61, 74.99, 75, 80, 81, 100, 101, 120, 121, 150, 151, 160, 161, 300, 301, 500, 501, 1500, 1501, 5000, 5001],
             "hour": [0, 5, 6, 12, 21, 22, 23], "days_since_purchase": [0, 1, 14, 15, 60, 61, 75, 90, 91],
             "days_before_travel": [0, 6, 7, 13, 14, 30], "tenure_days": [0, 30, 364, 365, 400],
-            "attendees": [1, 2, 3], "nights": [1, 2, 3], "days": [1, 2, 5, 6], "miles": [1, 10, 100]}
+            "attendees": [1, 2, 3], "nights": [1, 2, 3], "days": [1, 2, 5, 6], "miles": [1, 10, 100], "segment_hours": [1, 5, 5.5, 8, 9]}
     CODE = {"meal": "meals_50", "airfare": "travel", "train": "travel", "car_rental": "travel", "lodging": "travel",
             "rideshare": "travel", "parking": "travel", "internet": "office", "phone": "office", "coworking": "office",
             "equipment": "office", "laptop": "office", "personal_device": "office", "office_supplies": "office",
@@ -404,5 +404,5 @@ def test_one_model_check_matches_per_rule_solver_reference():
                 f["coded_account"] = "meals_100" if f["expense_kind"] == "meal" and f.get("at_company_event") else CODE[f["expense_kind"]]
         v = P.check(f)
         seen[v.status] += 1
-        assert (v.status, [(x.rule, x.because) for x in v.violations], [a for a in v.applied if P.by_id[a].layer != "irs"]) == reference(P, f), f
+        assert (v.status, [(x.rule, x.because) for x in v.violations], v.applied) == reference(P, f), f
     assert min(seen.values()) >= 30, seen
