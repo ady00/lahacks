@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { get, post } from "@/lib/api";
-import { COOKIE, cookieOptions, type User } from "@/lib/session";
+import { COOKIE, cookieOptions, getUser, type User } from "@/lib/session";
 import type { Employee, EmployeeList } from "@/lib/types";
 
 // Every dashboard mutation is a native <form method="post" action="/act/<name>"> to this handler:
@@ -47,6 +47,12 @@ export async function POST(req: Request, ctx: RouteContext<"/act/[name]">) {
       const id = str(f, "case_id");
       await post(`/cases/${id}/authorize`);
       return redirectTo(req, `/cases/${id}`);
+    }
+    case "approve": {
+      const user = await getUser();
+      if (!user?.manager) return new Response("managers only", { status: 403 });
+      await post(`/cases/${str(f, "case_id")}/approve`, { approver: user.employee_id, approved: str(f, "approved") === "true" });
+      return redirectTo(req, "/approvals");
     }
     default:
       return new Response("unknown action", { status: 404 });
