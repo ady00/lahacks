@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-17T23:31:34-07:00",
+ "as_of": "2026-10-17T23:33:38-07:00",
  "n_heldout": 107,
  "systems": [
   {
@@ -34,7 +34,7 @@
    "accuracy": 0.9907,
    "citation_f1": 0.996,
    "rerun_agreement": 1.0,
-   "median_latency_ms": 80.58,
+   "median_latency_ms": 108.02,
    "cost_per_1k_usd": 0.0275,
    "questions_per_txn": 0.0561
   }

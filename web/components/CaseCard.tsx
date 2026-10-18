@@ -18,6 +18,23 @@ export function CaseCard({ c }: { c: Case }) {
 
       <p className="text-lg font-medium break-words text-[#0F172A]">“{c.text}”</p>
 
+      {c.product && (
+        <a href={c.product.url} target="_blank" rel="noreferrer" className="flex items-center gap-4 rounded-lg border border-[#E2E8F0] bg-white p-3 text-sm transition-colors hover:border-[#CBD5E1]">
+          {c.product.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={c.product.image} alt="" className="size-14 shrink-0 rounded-md object-contain" />
+          )}
+          <span className="min-w-0">
+            <span className="block truncate font-medium text-[#0F172A]">{c.product.title ?? `Product link on ${c.product.vendor}`}</span>
+            <span className={`block text-xs ${muted}`}>
+              {c.product.error
+                ? `Could not read the page (${c.product.error}). Add the amount yourself.`
+                : [c.product.vendor, c.product.category, c.product.price != null ? usd(c.product.price) : "price not found, add the amount"].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+        </a>
+      )}
+
       <p className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3.5 text-sm transition-colors hover:border-[#CBD5E1]">{c.explanation}</p>
 
       {c.approval && (

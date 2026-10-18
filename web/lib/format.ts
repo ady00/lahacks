@@ -52,6 +52,7 @@ const SOURCES: Record<string, string> = {
   rules: "set by the rules",
   answer: "answered here",
   user: "answered here",
+  product: "product page",
 };
 export const sourceLabel = (s: string) => SOURCES[s] ?? s;
 

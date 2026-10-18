@@ -21,6 +21,7 @@ export type ApplicableOut = S["ApplicableOut"];
 export type ApplicableRule = S["ApplicableRule"];
 export type BankRulesOut = S["BankRulesOut"];
 export type BankRule = S["BankRule"];
+export type Product = S["Product"];
 
 // Not in the generated schema yet (POST /policy/rules/draft): a translated rule plus Z3's checks on it.
 export type Rule = { id: string; layer: string; text: string; when?: unknown; require?: unknown; custom?: boolean };

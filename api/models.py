@@ -4,7 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 Scalar = bool | str | float | int | None
-Source = Literal["jev", "user", "text", "employee", "approvals", "ledger", "derived", "rules", "answer"]
+Source = Literal["jev", "user", "text", "employee", "approvals", "ledger", "derived", "rules", "answer", "product"]
 Verdict = Literal["compliant", "violation", "undetermined"]
 
 
@@ -87,6 +87,17 @@ class Approval(_M):
     at: str
 
 
+class Product(_M):
+    """A store page the request linked to. Read once at /check; `error` says why nothing could be read."""
+    url: str
+    vendor: str
+    title: str | None = None
+    price: float | None = None
+    category: str | None = None
+    image: str | None = None
+    error: str | None = None
+
+
 class Case(_M):
     case_id: str
     created_at: str
@@ -103,6 +114,7 @@ class Case(_M):
     awaiting_approval: bool
     approval: Approval | None
     authorization: Authorization | None
+    product: Product | None = None
 
 
 class CaseList(_M):

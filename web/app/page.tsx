@@ -12,6 +12,7 @@ const EXAMPLES = [
   "Uber to the airport, $62",
   "Datadog subscription for the team, $650 a month",
   "Team lunch at the offsite, $320 for 8 people",
+  "iPad for customer demos https://www.amazon.com/dp/B09V3KXJPB",
 ];
 
 // The home page is the purchase check: a native GET form to /check, which POSTs the API server-side and
@@ -33,7 +34,7 @@ export default async function Home() {
     <>
       <PageHeader
         title={`Can I buy this, ${first}?`}
-        text="Describe it in your own words. You get a proven answer: allowed, needs approval, or one more question."
+        text="Describe it in your own words or paste a product link. You get a proven answer: allowed, needs approval, or one more question."
       >
         <a href="/ledger" className={btn}>Open ledger</a>
         <a href="/rules" className={btn}>See the rules</a>

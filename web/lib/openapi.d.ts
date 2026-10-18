@@ -518,6 +518,7 @@ export interface components {
             awaiting_approval: boolean;
             approval: components["schemas"]["Approval"] | null;
             authorization: components["schemas"]["Authorization"] | null;
+            product?: components["schemas"]["Product"] | null;
         };
         /** CaseList */
         CaseList: {
@@ -661,7 +662,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "jev" | "user" | "text" | "employee" | "approvals" | "ledger" | "derived" | "rules" | "answer";
+            source: "jev" | "user" | "text" | "employee" | "approvals" | "ledger" | "derived" | "rules" | "answer" | "product";
             /** P */
             p?: number | null;
         };
@@ -766,6 +767,26 @@ export interface components {
             };
             /** Base Facts Hash */
             base_facts_hash: string;
+        };
+        /**
+         * Product
+         * @description A store page the request linked to. Read once at /check; `error` says why nothing could be read.
+         */
+        Product: {
+            /** Url */
+            url: string;
+            /** Vendor */
+            vendor: string;
+            /** Title */
+            title?: string | null;
+            /** Price */
+            price?: number | null;
+            /** Category */
+            category?: string | null;
+            /** Image */
+            image?: string | null;
+            /** Error */
+            error?: string | null;
         };
         /** Question */
         Question: {

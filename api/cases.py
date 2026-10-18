@@ -13,6 +13,7 @@ from fastapi import HTTPException
 
 import engine
 from api import db
+from api import product as products
 from api.explain import MERCHANT_CATEGORY, explain, question
 from engine.keyword_baseline import CODED_FALLBACK, extract_stub, txn_row
 from engine.rules import Policy, _p, facts_from_probs
@@ -126,7 +127,8 @@ def standing_facts(employee: dict | None, on: date | None = None) -> dict:
     return out
 
 
-def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=None, model_source="jev"):
+def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=None, model_source="jev",
+                amount_source="user"):
     """-> (facts, probs, sources). `probs` given = re-proving a stored case without calling the model again."""
     probs = extract(text) if probs is None else probs
     facts, sources = {}, {}
@@ -139,7 +141,7 @@ def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=N
     for name, value in facts_from_probs(probs).items():
         put(name, value, model_source)
     if amount is not None:
-        put("amount", amount, "user")
+        put("amount", amount, amount_source)
     elif (a := parse_amount(text)) is not None:
         put("amount", a, "text")
     if has_time:
@@ -186,17 +188,20 @@ def _approval(conn, case_id):
     return {"approver": a["approver"], "approved": bool(a["approved"]), "at": a["at"]} if a else None
 
 
-def _prove(conn, case_id, created_at, employee_id, text, amount, timestamp, probs, source, authorization) -> dict:
+def _prove(conn, case_id, created_at, employee_id, text, amount, timestamp, probs, source, authorization,
+           product=None, amount_source="user") -> dict:
     """Run the full proof from stored inputs and save it. The extra keys (timestamp, _inputs) stay in the DB;
     the Case response model drops them."""
     ts, has_time = parse_ts(timestamp)
     answers = db.get_answers(conn, case_id)
     approval = _approval(conn, case_id)
     facts, probs, sources = build_facts(text, db.employee(conn, employee_id), amount, ts, has_time, answers,
-                                        approval and approval["approved"], probs, source)
+                                        approval and approval["approved"], probs, source, amount_source)
     case = to_case(case_id, created_at, employee_id, text, POLICY.decide(facts, probs), sources, probs,
                    approval, authorization)
-    case["timestamp"], case["_inputs"] = timestamp, {"amount": amount, "probs": probs, "source": source}
+    case["product"] = product
+    case["timestamp"], case["_inputs"] = timestamp, {"amount": amount, "probs": probs, "source": source,
+                                                     "amount_source": amount_source}
     db.put_case(conn, case, answers)
     return case
 
@@ -211,8 +216,14 @@ def new_case(conn, req) -> dict:
         amount = None if req.amount is None else validate_value("amount", req.amount)
     except ValueError as e:
         raise HTTPException(422, str(e))
+    # A link to a store page: its price is the amount unless one was given, and the model reads its title
+    product, amount_source, model_text = products.lookup(req.text), "user", req.text
+    if product:
+        model_text = f"{req.text}\n{products.describe(product)}"
+        if amount is None and product.get("price"):
+            amount, amount_source = validate_value("amount", product["price"]), "product"
     return _prove(conn, "c_" + secrets.token_hex(4), created_at, req.employee_id, req.text, amount, timestamp,
-                  *_model_facts(req.text), None)
+                  *_model_facts(model_text), None, product, amount_source)
 
 
 def _get(conn, case_id) -> dict:
@@ -226,7 +237,8 @@ def rerun(conn, case_id) -> dict:
     c = _get(conn, case_id)
     return _prove(conn, case_id, c["created_at"], c["employee_id"], c["text"], c["_inputs"]["amount"],
                   c["timestamp"], c["_inputs"]["probs"],
-                  c["_inputs"].get("source", "jev"), c["authorization"])
+                  c["_inputs"].get("source", "jev"), c["authorization"],
+                  c.get("product"), c["_inputs"].get("amount_source", "user"))
 
 
 def answer(conn, case_id, fact, value) -> dict:
@@ -271,7 +283,7 @@ def authorize(conn, case_id) -> dict:
     db.put_case(conn, c, db.get_answers(conn, case_id))
     coded = values.get("coded_account", "other")
     db.upsert_transactions(conn, [{
-        "txn_id": case_id, "company": "demo", "employee_id": c["employee_id"], "vendor": "", "memo": c["text"],
+        "txn_id": case_id, "company": "demo", "employee_id": c["employee_id"], "vendor": (c.get("product") or {}).get("vendor") or "", "memo": c["text"],
         "amount": values["amount"], "timestamp": c["timestamp"],
         "qb_category": {v: k for k, v in CODED_FALLBACK.items()}.get(coded, "Other"), "coded_account": coded,
         "receipt_attached": values.get("receipt_attached"), "receipt_date": None, "source": "case",

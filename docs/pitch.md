@@ -1,6 +1,6 @@
 # apriori · pitch notes for the Intuit and Workday tables
 
-For whoever is talking. One product, two framings. Say the 30-second core first, then switch to the track the judge is from. Numbers marked **[eval]** come from the Evaluation page; read them off the screen rather than from memory.
+For whoever is talking. One product, two framings. Say the 30-second core first, then switch to the track the judge is from. Evaluation numbers below are from the run of 2026-10-17 23:33 (`eval/results.json`); the Evaluation page shows the same table.
 
 ## The 30-second core (both tracks)
 
@@ -30,7 +30,7 @@ What their brief asks for: a technical unlock from System One, clear customer va
 - **Bank rules page**: paste QuickBooks' own bank rules (description contains words, amount in range, first match wins). Z3 string theory finds rules that can never fire because an earlier rule shadows them, and pairs that overlap, with a concrete example transaction. That is a QuickBooks-native bug finder nobody has.
 - Policy Studio: a sentence becomes a rule, proven consistent with the other 27 before it is saved.
 
-**Evaluation (the Evaluation page).** Four systems on the same held-out purchases with human-labeled facts: Keyword rules, LLM judge, LLM facts + Z3, Jev + Z3. Scored on verdict accuracy, rule-citation F1, rerun agreement, median latency, cost per 1,000 checks and questions asked. Read the row for Jev + Z3 off the screen **[eval]**, then say where it loses (the README in `eval/` names the cases). Judges trust an evaluation that admits a weakness; volunteer it before they ask.
+**Evaluation (the Evaluation page).** Four systems on the same held-out purchases with human-labeled facts: Keyword rules, LLM judge, LLM facts + Z3, Jev + Z3. Scored on verdict accuracy, rule-citation F1, rerun agreement, median latency, cost per 1,000 checks and questions asked. On 107 held-out purchases: Jev + Z3 scores 99.1% verdict accuracy and 99.6% rule-citation F1, identical answers on rerun, 108 ms median, about 3 cents per 1,000 checks. The LLM judge ties on accuracy (99.1%) but flips 7% of its answers on rerun, cites rules at 98.0%, takes 3.75 s and costs about $10.76 per 1,000. Keyword rules reach 83.2% because they cannot see role or tenure and never say undetermined. Then say where ours loses: one intern cab ride where Jev's company-event probability was 0.18, just above the 0.15 floor, so the system asked a question instead of citing rule 5.2. The full method and misses are in `eval/README.md`. Judges trust an evaluation that admits a weakness; volunteer it before they ask.
 
 **Say about the data.** The demo ledger is 33 hand-written rows planted so every rule fires at least once. Intuit's 100-company archive is ingested separately into 36,032 purchase cases by the offline loader, with every change disclosed in `docs/backend.md`. The held-out evaluation set and how its labels were made are in `eval/README.md`.
 
@@ -87,9 +87,11 @@ What their rubric weighs: agentic logic 30%, new-hire relevance 20%, responsible
 | Facts the rules see | 11, of which 3 come from the model and 8 from records, the clock or the rules |
 | Model latency per purchase | about 100 ms (Jev, three typed questions) |
 | Solve time per purchase | about 1 ms; the 33-row ledger audits in a few ms |
-| Held-out evaluation cases | **[eval]** |
-| Jev + Z3 accuracy / citation F1 / rerun agreement | **[eval]** |
-| LLM judge rerun agreement and cost per 1,000 | **[eval]** |
+| Held-out evaluation cases | 107 (41 human-labeled texts × 2–3 record contexts; 67 violation, 35 compliant, 5 undetermined) |
+| Jev + Z3 accuracy / citation F1 / rerun agreement | 99.1% / 99.6% / 100%, 108 ms median, $0.03 per 1,000 |
+| LLM judge accuracy / rerun agreement / cost per 1,000 | 99.1% / 93.3% / $10.76, 3.75 s median (Claude Sonnet via the CLI) |
+| Keyword rules accuracy | 83.2%, never undetermined, blind to role and tenure |
+| Gold-label check | The independent three-valued interpreter agreed with Z3 on 107 of 107 cases |
 | Intuit archive ingested offline | 36,032 purchase cases, 100 companies |
 
 ## Do not say

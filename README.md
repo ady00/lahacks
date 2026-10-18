@@ -91,7 +91,7 @@ Facts the rules force (like which account a meal posts to) are derived by asking
 
 ### Purchase check
 
-Describe the purchase in your own words. The signed-in employee's role, the amount in the text (or the amount box), and the current time all become facts. Example chips cover the main paths.
+Describe the purchase in your own words. The signed-in employee's role, the amount in the text (or the amount box), and the current time all become facts. Example chips cover the main paths. Paste a product link instead (Amazon, Best Buy, Walmart, Target, Apple and other big stores) and the page's title, price and category become the description and the amount: an iPad link is checked as a $393 equipment purchase, with the product shown on the case.
 
 ![Check page](docs/screenshots/check.png)
 

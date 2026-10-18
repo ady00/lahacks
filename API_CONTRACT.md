@@ -94,7 +94,7 @@ Every route that touches a purchase returns this one shape, re-proven by Z3 on e
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `verdict` | `compliant` · `violation` · `undetermined` | The solver's answer. `undetermined` means it depends on a fact nobody knows yet. |
-| `facts` | map of fact → `{value, source, p}` | Only known facts appear; an unknown fact is simply absent. `source` is one of `jev`, `user`, `text`, `employee`, `approvals`, `ledger`, `derived`, `rules`, `answer`. `p` is Jev's probability, null for everything else. |
+| `facts` | map of fact → `{value, source, p}` | Only known facts appear; an unknown fact is simply absent. `source` is one of `jev`, `user`, `text`, `employee`, `approvals`, `ledger`, `derived`, `rules`, `answer`, `product`. `p` is Jev's probability, null for everything else. |
 | `facts.coded_account` with `source: rules` | | The account the IRS coding rules force for this purchase; the ledger posts it there. Absent when the rules allow more than one (then a question decides it). |
 | `violations[]` | `{rule, layer, text, because}` | Every broken rule, not just the first; `because` names the facts in Z3's unsat core. |
 | `applied` | rule ids | Only for `compliant`: the rules whose conditions applied and held. |
@@ -104,6 +104,7 @@ Every route that touches a purchase returns this one shape, re-proven by Z3 on e
 | `awaiting_approval` | bool | True while the fix is pre-approval and no manager has decided. Flips to false on `/approve` either way. |
 | `approval` | `{approver, approved, at}` or null | The latest manager decision. `approved: false` leaves the verdict a violation. |
 | `authorization` | authorization or null | Set after a successful `/authorize`. |
+| `product` | product or null | Set when the text links to a known store (Amazon, Best Buy, Walmart, Target, Apple, Newegg, eBay, B&H, Home Depot, Costco, Staples, Office Depot, Dell, Micro Center, Etsy, IKEA, Wayfair): `{url, vendor, title, price, category, image, error}`. The page price becomes `amount` with source `product` unless an amount was given; the title and category are appended to what the model reads; `error` explains an unreadable page. |
 
 Fact values and types: `role` ∈ employee, contractor, intern · `expense_kind` ∈ meal, rideshare, airfare, hotel, software, equipment, entertainment, other · `coded_account` ∈ meals_50, meals_100, entertainment_0, travel, office, other · `amount` number (USD) · `hour` 0–23 · `days_since_purchase` integer · `tenure_days` integer (days since the employee's `start_date`, source `employee`) · `receipt_attached`, `pre_approved`, `client_present`, `at_company_event` booleans.
 
