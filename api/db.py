@@ -30,7 +30,7 @@ TXN_COLS = ["txn_id", "company", "employee_id", "vendor", "memo", "amount", "tim
 
 
 def connect(path=None) -> sqlite3.Connection:
-    conn = sqlite3.connect(str(path or os.environ.get("POP_DB", "pop.db")))
+    conn = sqlite3.connect(str(path or os.environ.get("POP_DB", "pop.db")), timeout=30)
     conn.row_factory = sqlite3.Row
     init(conn)
     return conn
@@ -38,8 +38,8 @@ def connect(path=None) -> sqlite3.Connection:
 
 def init(conn):
     conn.executescript(SCHEMA)
-    if not conn.execute("SELECT 1 FROM employees LIMIT 1").fetchone():
-        conn.executemany("INSERT INTO employees VALUES (?,?,?,?)", SEED_EMPLOYEES)
+    if not conn.execute("SELECT 1 FROM employees LIMIT 1").fetchone():  # OR IGNORE: concurrent first connections race here
+        conn.executemany("INSERT OR IGNORE INTO employees VALUES (?,?,?,?)", SEED_EMPLOYEES)
     conn.commit()
 
 

@@ -194,3 +194,22 @@ def test_receipt_flag_variants_and_bom(tmp_path):
     assert r["skipped"] == [] and r["transactions"] == 7 and r["employees"] == 1
     got = {x["txn_id"]: x["receipt_attached"] for x in db.list_transactions(conn)}
     assert got == {"a": 1, "b": 1, "c": 1, "d": 0, "e": 0, "f": None, "g": None}
+
+
+def test_concurrent_first_connections_are_race_safe(tmp_path):
+    import threading
+    n, errs = 16, []
+    for rnd in range(20):  # the race window is small; many fresh DBs make it near-certain
+        path, barrier = tmp_path / f"race{rnd}.db", threading.Barrier(n)
+
+        def first():
+            try:
+                barrier.wait()
+                db.connect(path).close()
+            except Exception as x:  # noqa: BLE001
+                errs.append(repr(x))
+        ts = [threading.Thread(target=first) for _ in range(n)]
+        [t.start() for t in ts]; [t.join() for t in ts]
+        assert errs == []
+        with closing(db.connect(path)) as conn:
+            assert conn.execute("select count(*) from employees").fetchone()[0] == 4
