@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { API_URL, get } from "@/lib/api";
 import { getUser } from "@/lib/session";
@@ -41,14 +40,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             {stub && <span className={`${chip} bg-amber-100 text-amber-800`}>STUB DATA</span>}
             <span className="flex-1" />
             {NAV.map(([label, href]) => (
-              <Link key={href} href={href} className={link}>
+              <a key={href} href={href} className={link}>
                 {label}
-              </Link>
+              </a>
             ))}
             {user?.manager && (
-              <Link href="/approvals" className={link}>
+              <a href="/approvals" className={link}>
                 Approvals
-              </Link>
+              </a>
             )}
             {user ? (
               <form method="post" action="/act/logout" className="flex items-center gap-2 text-sm">
@@ -57,9 +56,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <button className="text-zinc-500 underline">Sign out</button>
               </form>
             ) : (
-              <Link href="/login" className={link}>
+              <a href="/login" className={link}>
                 Sign in
-              </Link>
+              </a>
             )}
           </nav>
         </header>

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { get } from "@/lib/api";
 import { requireUser } from "@/lib/session";
 import type { CaseList } from "@/lib/types";
@@ -12,7 +11,7 @@ export default async function ApprovalsPage() {
   if (!user.manager) {
     return (
       <p>
-        Managers only — <Link href="/login" className="underline">sign in as a manager</Link>.
+        Managers only — <a href="/login" className="underline">sign in as a manager</a>.
       </p>
     );
   }
@@ -48,9 +47,9 @@ export default async function ApprovalsPage() {
                 <input type="hidden" name="approved" value="false" />
                 <button className={btn}>Reject</button>
               </form>
-              <Link href={`/cases/${c.case_id}`} className="ml-2 underline">
+              <a href={`/cases/${c.case_id}`} className="ml-2 underline">
                 Open case
-              </Link>
+              </a>
             </div>
           </article>
         ))

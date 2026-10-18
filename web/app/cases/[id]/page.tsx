@@ -2,7 +2,7 @@ import { get } from "@/lib/api";
 import { requireUser } from "@/lib/session";
 import type { Case } from "@/lib/types";
 import { CaseCard } from "@/components/CaseCard";
-import { btn, btnPrimary, h1 } from "@/lib/ui";
+import { btn, btnPrimary, h1, input } from "@/lib/ui";
 
 // Every button is a native form to /act/<verb>; the API re-proves and this page re-renders whatever it says.
 export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
@@ -17,7 +17,18 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
       <h1 className={h1}>{`Case ${c.case_id}`}</h1>
       <CaseCard c={c} />
 
-      {q && (
+      {q && q.fact === "amount" ? (
+        // the one numeric question the engine asks (api/explain.py); every other question is yes/no or an enum
+        <form method="post" action="/act/answer" className="flex items-end gap-2">
+          <input type="hidden" name="case_id" value={c.case_id} />
+          <input type="hidden" name="fact" value="amount" />
+          <label className="text-sm">
+            {q.text}
+            <input name="value" type="number" step="0.01" min="0.01" required className={input} />
+          </label>
+          <button className={btnPrimary}>Submit</button>
+        </form>
+      ) : q && (
         <section className="space-y-2">
           <h2 className="font-semibold">{q.text}</h2>
           <div className="flex flex-wrap gap-2">
