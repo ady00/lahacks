@@ -27,11 +27,14 @@ export default async function BankRulesPage({ searchParams }: PageProps<"/bank-r
   const overlaps = out?.overlaps.filter((o) => !out.shadowed.some((s) => (s.rule === o.a && s.by.includes(o.b)) || (s.rule === o.b && s.by.includes(o.a)))) ?? [];
   const problems = (out?.shadowed.length ?? 0) + overlaps.length;
   return (
-    <>
+    <div className="animate-fade-in-up space-y-6">
       <PageHeader title="Bank rules" text="Paste your QuickBooks bank rules. Z3 finds the ones that can never fire and the pairs that overlap.">
         {out && (
-          <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1 shadow-[0_2px_3px_#00000033]">
-            <span className={`size-1.75 rounded-full ${problems ? "bg-amber-500" : "bg-secondary"}`} />
+          <span className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-[0_2px_4px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.02]">
+            <span className="relative flex size-2">
+              <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${problems ? "bg-amber-400" : "bg-secondary"} opacity-75`} />
+              <span className={`relative inline-flex size-2 rounded-full ${problems ? "bg-amber-500" : "bg-secondary"}`} />
+            </span>
             <span className="font-serif text-[11.5px] font-semibold text-ink">
               {problems ? `${problems} ${problems === 1 ? "problem" : "problems"} found` : "No shadowed or overlapping rules (Z3 proved)"}
             </span>
@@ -39,7 +42,7 @@ export default async function BankRulesPage({ searchParams }: PageProps<"/bank-r
         )}
       </PageHeader>
 
-      <section className={card}>
+      <section className={`${card} hover:shadow-[0_16px_36px_-6px_rgba(15,23,42,0.1)]`}>
         <form method="get" action="/bank-rules" className="space-y-3.5 border-b border-[#F1F5F9] bg-gradient-to-b from-[#FAFAF9] to-white px-5 pb-5 pt-6 sm:px-7">
           <p className={eyebrow}>Your rules, in order</p>
           <textarea name="rules" rows={9} defaultValue={text} spellCheck={false} className={`${input} font-mono text-[13px]`} />
@@ -120,6 +123,6 @@ export default async function BankRulesPage({ searchParams }: PageProps<"/bank-r
           </section>
         </>
       )}
-    </>
+    </div>
   );
 }

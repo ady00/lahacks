@@ -34,16 +34,16 @@ export default async function YouPage() {
     ["Role", employee.role],
   ];
   return (
-    <>
+    <div className="animate-fade-in-up space-y-6">
       <PageHeader title="What applies to you" text="The rules that apply to your role and tenure.">
         <a href="/rules" className={btn}>All rules</a>
       </PageHeader>
 
-      <section className={`${card} p-7`}>
+      <section className={`${card} p-7 hover:shadow-[0_14px_30px_-6px_rgba(15,23,42,0.08)]`}>
         <p className={eyebrow}>From your employee record</p>
         <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
           {record.map(([k, v]) => (
-            <div key={k}>
+            <div key={k} className="rounded-lg p-2 transition-colors hover:bg-slate-50">
               <dt className={`text-[12px] ${muted}`}>{k}</dt>
               <dd className="font-medium text-[#1E293B]">{v}</dd>
             </div>
@@ -59,7 +59,7 @@ export default async function YouPage() {
             <div key={layer} className="space-y-3">
               <p className={eyebrow}>{LAYER[layer][0]}</p>
               {group.map((r) => (
-                <div key={r.id} className={`${row} flex flex-wrap items-center justify-between gap-3`}>
+                <div key={r.id} className={`${row} flex flex-wrap items-center justify-between gap-3 transition-all duration-200 hover:border-slate-300 hover:shadow-xs hover:-translate-y-px`}>
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-1 sm:flex-nowrap">
                     <div className="w-24 shrink-0">
                       <div className="font-serif text-[13px] font-bold text-ink">{`Rule ${r.id}`}</div>
@@ -99,6 +99,6 @@ export default async function YouPage() {
           <li>When a fact is unknown, the check asks you instead of guessing.</li>
         </ul>
       </section>
-    </>
+    </div>
   );
 }

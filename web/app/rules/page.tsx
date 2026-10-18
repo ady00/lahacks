@@ -31,21 +31,24 @@ export default async function RulesPage({ searchParams }: PageProps<"/rules">) {
   return (
     <>
       <PageHeader title="Policy Studio" text="Write a rule in plain English. Z3 checks it against the others before it goes live.">
-        <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1 shadow-[0_2px_3px_#00000033]">
-          <span className={`size-1.75 rounded-full ${audit.conflicts.length || audit.dead.length ? "bg-amber-500" : "bg-secondary"}`} />
+        <span className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-[0_2px_4px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.02]">
+          <span className="relative flex size-2">
+            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${audit.conflicts.length || audit.dead.length ? "bg-amber-400" : "bg-secondary"} opacity-75`} />
+            <span className={`relative inline-flex size-2 rounded-full ${audit.conflicts.length || audit.dead.length ? "bg-amber-500" : "bg-secondary"}`} />
+          </span>
           <span className="font-serif text-[11.5px] font-semibold text-ink">
             {audit.conflicts.length || audit.dead.length ? "Consistency problems found" : "Status: Consistent (Z3 proved)"}
           </span>
         </span>
       </PageHeader>
 
-      <section className={card}>
+      <section className={`${card} animate-fade-in-up hover:shadow-[0_16px_36px_-6px_rgba(15,23,42,0.1)]`}>
         <form method="get" action="/rules" className="space-y-3.5 border-b border-[#F1F5F9] bg-gradient-to-b from-[#FAFAF9] to-white px-5 pb-5 pt-6 sm:px-7">
           <div className="flex items-center gap-2">
-            <span className="flex size-5 items-center justify-center rounded-md bg-[#EEF2FF] text-secondary"><Sparkle /></span>
+            <span className="flex size-5 items-center justify-center rounded-md bg-[#EEF2FF] text-secondary shadow-xs transition-transform hover:rotate-12"><Sparkle /></span>
             <span className={eyebrow}>Policy command</span>
           </div>
-          <label className="flex min-h-13 items-center gap-3.5 rounded-xl border-[1.5px] border-secondary bg-white px-4.5 py-2 shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-secondary)_15%,transparent),0_2px_4px_#00000005]">
+          <label className="flex min-h-13 items-center gap-3.5 rounded-xl border-[1.5px] border-secondary bg-white px-4.5 py-2 shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-secondary)_15%,transparent),0_2px_6px_rgba(145,73,196,0.08)] transition-all duration-200 focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-secondary)_25%,transparent),0_4px_12px_rgba(145,73,196,0.15)]">
             <Wand />
             <input
               name="text"
@@ -54,7 +57,7 @@ export default async function RulesPage({ searchParams }: PageProps<"/rules">) {
               placeholder="Require VP approval if an engineer buys SaaS or cloud tools over $1,000 a month"
               className="min-w-0 grow bg-transparent font-serif text-[15px] font-medium tracking-[-0.01em] text-ink placeholder:text-[#94A3B8] focus:outline-none"
             />
-            <kbd className="hidden rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-1 font-sans text-[11px] font-semibold text-[#64748B] sm:block">⏎ to translate</kbd>
+            <kbd className="hidden rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-1 font-sans text-[11px] font-semibold text-[#64748B] transition-colors hover:bg-slate-100 sm:block">⏎ to translate</kbd>
           </label>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[12px] font-medium text-[#94A3B8]">Suggested templates:</span>

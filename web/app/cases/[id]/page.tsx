@@ -19,7 +19,7 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
   const { title, next } = headline(c);
   const amount = c.facts.amount?.value;
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in-up space-y-6">
       <PageHeader title={title} text={next}>
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- plain anchors on purpose: the refresh timer must never pull users back */}
         <a href="/" className={btn}>Check another purchase</a>
@@ -27,25 +27,32 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
       <PurchaseGraph key={graph?.base_facts_hash ?? JSON.stringify(c.facts)} initialGraph={graph} awaitingApproval={c.awaiting_approval}>
       {q && q.fact === "amount" ? (
         // the one numeric question the engine asks (api/explain.py); every other question is yes/no or an enum
-        <form method="post" action="/act/answer" className="flex flex-wrap items-end gap-2">
+        <form method="post" action="/act/answer" className="animate-fade-in flex flex-wrap items-end gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-5 shadow-xs">
           <input type="hidden" name="case_id" value={c.case_id} />
           <input type="hidden" name="fact" value="amount" />
-          <label className="text-sm">
+          <label className="text-sm font-medium text-amber-950">
             {q.text}
-            <input name="value" type="number" step="0.01" min="0.01" required className={input} />
+            <input name="value" type="number" step="0.01" min="0.01" required className={`${input} mt-1.5`} />
           </label>
-          <button className={btnPrimary}>Answer</button>
+          <button className={btnPrimary}>Submit Answer</button>
         </form>
       ) : q && (
-        <section className="space-y-2">
-          <h2 className="font-serif text-[16px] font-bold tracking-[-0.02em] text-ink">{q.text}</h2>
-          <div className="flex flex-wrap gap-2">
+        <section className="animate-fade-in rounded-xl border border-amber-200 bg-amber-50/70 p-5 shadow-xs space-y-3">
+          <div className="flex items-center gap-2 text-amber-800">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+            </span>
+            <span className="text-xs font-bold uppercase tracking-wider">Required Detail</span>
+          </div>
+          <h2 className="font-serif text-[17px] font-bold tracking-tight text-amber-950">{q.text}</h2>
+          <div className="flex flex-wrap gap-2.5 pt-1">
             {choices.map((v) => (
               <form key={v} method="post" action="/act/answer">
                 <input type="hidden" name="case_id" value={c.case_id} />
                 <input type="hidden" name="fact" value={q.fact} />
                 <input type="hidden" name="value" value={v} />
-                <button className={btn}>{q.options ? v : v === "true" ? "Yes" : "No"}</button>
+                <button className={`${btn} font-semibold transition-all hover:border-secondary hover:text-secondary hover:shadow-xs active:scale-95`}>{q.options ? v : v === "true" ? "Yes" : "No"}</button>
               </form>
             ))}
           </div>
@@ -53,9 +60,11 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
       )}
 
       {c.verdict === "compliant" && !c.authorization && amount != null && (
-        <form method="post" action="/act/authorize">
+        <form method="post" action="/act/authorize" className="animate-fade-in">
           <input type="hidden" name="case_id" value={c.case_id} />
-          <button className={btnPrimary}>{`Authorize card for ${usd(Number(amount))}`}</button>
+          <button className={`${btnPrimary} px-6 py-2.5 text-[14px] shadow-[0_4px_16px_rgba(145,73,196,0.35)] hover:shadow-[0_6px_22px_rgba(145,73,196,0.45)]`}>
+            💳 {`Authorize card for ${usd(Number(amount))}`}
+          </button>
         </form>
       )}
 
