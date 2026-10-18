@@ -1,7 +1,6 @@
 import { get, post } from "@/lib/api";
 import type { PolicyAudit, PolicyOut } from "@/lib/types";
-
-const muted = "text-zinc-500 dark:text-zinc-400";
+import { h1, muted } from "@/lib/ui";
 
 // The schema types rules and facts as plain dicts; these are the fields the contract documents.
 type Rule = { id: string; layer: string; text: string; when?: unknown; require?: unknown };
@@ -19,7 +18,7 @@ export default async function RulesPage() {
       <p className={`text-sm ${muted}`}>{`Policy version ${policy.version}`}</p>
 
       <section>
-        <h1 className="mb-3 font-semibold">{`Rules (${rules.length})`}</h1>
+        <h1 className={`mb-3 ${h1}`}>{`Rules (${rules.length})`}</h1>
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {rules.map((r) => (
             <div key={r.id} className="grid grid-cols-[6rem_1fr_1fr] gap-4 py-3 text-sm">

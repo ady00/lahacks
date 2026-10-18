@@ -1,24 +1,23 @@
 import { get } from "@/lib/api";
 import { getUser } from "@/lib/session";
 import type { EmployeeList } from "@/lib/types";
+import { btn, btnPrimary, h1, input } from "@/lib/ui";
 
 const KINDS = ["employee", "intern", "contractor", "manager"];
-const input = "w-full rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700";
-const button = "rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900";
 
 // No passwords: a hackathon demo on two laptops. "manager" is a dashboard flag; the policy role stays employee.
 export default async function LoginPage() {
   const [user, { employees }] = await Promise.all([getUser(), get<EmployeeList>("/employees")]);
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-semibold">Sign in</h1>
+      <h1 className={h1}>Sign in</h1>
       {user && (
         <form method="post" action="/act/logout" className="flex items-center gap-3 text-sm">
           <span>
             Signed in as <b>{user.name}</b>
             {user.manager && " (manager)"}
           </span>
-          <button className="rounded border px-3 py-1">Sign out</button>
+          <button className={btn}>Sign out</button>
         </form>
       )}
       <div className="grid gap-8 sm:grid-cols-2">
@@ -36,7 +35,7 @@ export default async function LoginPage() {
               ))}
             </select>
           </label>
-          <button className={button}>Create account</button>
+          <button className={btnPrimary}>Create account</button>
         </form>
 
         <form method="post" action="/act/login" className="space-y-4">
@@ -54,7 +53,7 @@ export default async function LoginPage() {
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="manager" /> I approve purchases
           </label>
-          <button className={button}>Sign in</button>
+          <button className={btnPrimary}>Sign in</button>
         </form>
       </div>
     </div>

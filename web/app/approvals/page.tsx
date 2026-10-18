@@ -4,10 +4,7 @@ import { requireUser } from "@/lib/session";
 import type { CaseList } from "@/lib/types";
 import { usd } from "@/lib/format";
 import { VerdictChip } from "@/components/VerdictChip";
-
-const muted = "text-zinc-500 dark:text-zinc-400";
-const btn = "rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800";
-const btnPrimary = "rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900";
+import { btn, btnPrimary, card, h1, muted } from "@/lib/ui";
 
 // The manager's laptop: reloads itself every 5 s so a case checked elsewhere shows up without a click.
 export default async function ApprovalsPage() {
@@ -23,12 +20,12 @@ export default async function ApprovalsPage() {
   return (
     <div className="space-y-4">
       <meta httpEquiv="refresh" content="5" />
-      <h1 className="font-semibold">{`Pending approvals (${cases.length})`}</h1>
+      <h1 className={h1}>{`Pending approvals (${cases.length})`}</h1>
       {cases.length === 0 ? (
         <p className={muted}>Nothing waiting for approval.</p>
       ) : (
         cases.map((c) => (
-          <article key={c.case_id} className="space-y-2 rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+          <article key={c.case_id} className={`${card} space-y-2 text-sm`}>
             <div className="flex items-center gap-3">
               <VerdictChip verdict={c.verdict} />
               <span className="font-mono">{c.employee_id}</span>

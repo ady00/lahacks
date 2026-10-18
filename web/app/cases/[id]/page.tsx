@@ -2,9 +2,7 @@ import { get } from "@/lib/api";
 import { requireUser } from "@/lib/session";
 import type { Case } from "@/lib/types";
 import { CaseCard } from "@/components/CaseCard";
-
-const btn = "rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800";
-const btnPrimary = "rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900";
+import { btn, btnPrimary, h1 } from "@/lib/ui";
 
 // Every button is a native form to /act/<verb>; the API re-proves and this page re-renders whatever it says.
 export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
@@ -16,6 +14,7 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
   return (
     <div className="space-y-6">
       {c.awaiting_approval && <meta httpEquiv="refresh" content="5" />}
+      <h1 className={h1}>{`Case ${c.case_id}`}</h1>
       <CaseCard c={c} />
 
       {q && (

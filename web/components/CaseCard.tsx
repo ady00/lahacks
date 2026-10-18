@@ -1,13 +1,12 @@
 import type { Case } from "@/lib/types";
 import { fixLine, pct, usd } from "@/lib/format";
 import { VerdictChip } from "./VerdictChip";
-
-const muted = "text-zinc-500 dark:text-zinc-400";
+import { card, muted } from "@/lib/ui";
 
 /** The one case shape, rendered the same on every page. */
 export function CaseCard({ c }: { c: Case }) {
   return (
-    <article className="space-y-5 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+    <article className={`${card} space-y-5`}>
       <header className="flex items-center gap-3">
         <VerdictChip verdict={c.verdict} />
         <span className="font-mono text-sm">{c.case_id}</span>
@@ -52,7 +51,7 @@ export function CaseCard({ c }: { c: Case }) {
             {Object.entries(c.facts).map(([name, f]) => (
               <tr key={name} className="border-t border-zinc-100 dark:border-zinc-800">
                 <td className="py-1 font-mono">{name}</td>
-                <td className="py-1">{String(f.value)}</td>
+                <td className="py-1">{name === "amount" ? usd(Number(f.value)) : String(f.value)}</td>
                 <td className={`py-1 ${muted}`}>{f.source}</td>
                 <td className="py-1">{pct(f.p)}</td>
               </tr>
