@@ -41,7 +41,7 @@ def test_txn_row_normalizes_csv_and_db_rows_without_mutating():
 
 
 def test_coded_fallback():
-    assert CODED_FALLBACK == {"Meals": "meals_50", "Travel": "travel", "Office": "office", "Entertainment": "entertainment_0"}
+    assert CODED_FALLBACK == {"Meals": "meals_50", "Travel": "travel", "Office": "office", "Entertainment": "other"}
 
 
 # reviewer edge cases

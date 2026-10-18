@@ -10,7 +10,7 @@
 {"facts": {"at_company_event": {"p": 0.03}, "client_present": {"p": 0.05}, "expense_kind": {"p": 1.0, "value": "equipment"}}, "txn_id": "t_0010"}
 {"facts": {"at_company_event": {"p": 0.06}, "client_present": {"p": 0.96}, "expense_kind": {"p": 1.0, "value": "meal"}}, "txn_id": "t_0011"}
 {"facts": {"at_company_event": {"p": 0.27}, "client_present": {"p": 0.42}, "expense_kind": {"p": 1.0, "value": "airfare"}}, "txn_id": "t_0012"}
-{"facts": {"at_company_event": {"p": 0.35}, "client_present": {"p": 0.28}, "expense_kind": {"p": 1.0, "value": "hotel"}}, "txn_id": "t_0013"}
+{"facts": {"at_company_event": {"p": 0.35}, "client_present": {"p": 0.28}, "expense_kind": {"p": 1.0, "value": "lodging"}}, "txn_id": "t_0013"}
 {"facts": {"at_company_event": {"p": 0.03}, "client_present": {"p": 0.04}, "expense_kind": {"p": 1.0, "value": "software"}}, "txn_id": "t_0014"}
 {"facts": {"at_company_event": {"p": 0.03}, "client_present": {"p": 0.04}, "expense_kind": {"p": 1.0, "value": "equipment"}}, "txn_id": "t_0015"}
 {"facts": {"at_company_event": {"p": 0.05}, "client_present": {"p": 0.12}, "expense_kind": {"p": 1.0, "value": "other"}}, "txn_id": "t_0016"}
@@ -23,10 +23,10 @@
 {"facts": {"at_company_event": {"p": 0.1}, "client_present": {"p": 0.9}, "expense_kind": {"p": 1.0, "value": "meal"}}, "txn_id": "t_0023"}
 {"facts": {"at_company_event": {"p": 0.03}, "client_present": {"p": 0.56}, "expense_kind": {"p": 1.0, "value": "meal"}}, "txn_id": "t_0024"}
 {"facts": {"at_company_event": {"p": 0.03}, "client_present": {"p": 0.05}, "expense_kind": {"p": 1.0, "value": "rideshare"}}, "txn_id": "t_0025"}
-{"facts": {"at_company_event": {"p": 0.07}, "client_present": {"p": 0.12}, "expense_kind": {"p": 1.0, "value": "hotel"}}, "txn_id": "t_0026"}
+{"facts": {"at_company_event": {"p": 0.07}, "client_present": {"p": 0.12}, "expense_kind": {"p": 1.0, "value": "lodging"}}, "txn_id": "t_0026"}
 {"facts": {"at_company_event": {"p": 0.04}, "client_present": {"p": 0.09}, "expense_kind": {"p": 1.0, "value": "software"}}, "txn_id": "t_0027"}
 {"facts": {"at_company_event": {"p": 0.03}, "client_present": {"p": 0.06}, "expense_kind": {"p": 1.0, "value": "meal"}}, "txn_id": "t_0028"}
-{"facts": {"at_company_event": {"p": 0.95}, "client_present": {"p": 0.19}, "expense_kind": {"p": 0.98, "value": "entertainment"}}, "txn_id": "t_0029"}
+{"facts": {"at_company_event": {"p": 0.95}, "client_present": {"p": 0.19}, "expense_kind": {"p": 0.98, "value": "other"}}, "txn_id": "t_0029"}
 {"facts": {"at_company_event": {"p": 0.43}, "client_present": {"p": 0.64}, "expense_kind": {"p": 1.0, "value": "meal"}}, "txn_id": "t_0030"}
 {"facts": {"at_company_event": {"p": 0.18}, "client_present": {"p": 0.07}, "expense_kind": {"p": 1.0, "value": "rideshare"}}, "txn_id": "t_0031"}
 {"facts": {"at_company_event": {"p": 0.08}, "client_present": {"p": 0.09}, "expense_kind": {"p": 0.99, "value": "other"}}, "txn_id": "t_0032"}

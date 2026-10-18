@@ -23,7 +23,7 @@ def test_ledger_audit_counts_and_caches(client):
     _seed(conn)
     a = client.post("/ledger/audit", json={"company": "demo"}).json()
     assert a["n"] == 3 and a["by_verdict"] == {"compliant": 1, "violation": 1, "undetermined": 1}
-    assert {r["rule"] for r in a["by_rule"]} == {"3.4", "IRS-meal"}
+    assert {r["rule"] for r in a["by_rule"]} == {"IRS-meal"}
     assert conn.execute("select count(*) from verdicts").fetchone()[0] == 3
     r = client.get("/ledger", params={"company": "demo", "verdict": "violation"})
     assert "x-stub" not in r.headers and r.json()["total"] == 1 and r.json()["transactions"][0]["txn_id"] == "t2"
@@ -64,7 +64,7 @@ def test_one_bad_row_does_not_abort(client, monkeypatch):
 
 def test_paging_company_filter_and_unknown_verdict(client):
     conn = db.connect()
-    db.upsert_transactions(conn, [_t(f"d{i:02d}", 20 + 3 * i) for i in range(12)] + [dict(_t("a1"), company="acme")])
+    db.upsert_transactions(conn, [_t(f"d{i:02d}", 4000 + 500 * i) for i in range(12)] + [dict(_t("a1"), company="acme")])  # 9 are over $5,000
     full = client.get("/ledger").json()
     assert full["total"] == 13
     pages = [r["txn_id"] for o in range(0, 13, 5) for r in client.get("/ledger", params={"limit": 5, "offset": o}).json()["transactions"]]
@@ -117,15 +117,15 @@ def test_reload_then_audit_is_incremental(client, tmp_path, monkeypatch):
     client.post("/data/reload"); client.post("/ledger/audit", json={"company": "demo"})
     first = conn.execute("select case_json from verdicts where txn_id='t1'").fetchone()[0]
     with open(tmp_path / "transactions.csv", "a") as f:
-        f.write("t3,demo,e_newhire,Nobu,NOBU LA,120,2026-09-20T20:30:00-07:00,Travel,1,2026-09-21,injected\n")
+        f.write("t3,demo,e_newhire,Nobu,NOBU LA,7000,2026-09-20T20:30:00-07:00,Travel,1,2026-09-21,injected\n")
     assert client.post("/data/reload").json()["transactions"] == 2
     a = client.post("/ledger/audit", json={"company": "demo"}).json()
     assert a["n"] == 2 and conn.execute("select count(*) from verdicts").fetchone()[0] == 2
     assert conn.execute("select case_json from verdicts where txn_id='t1'").fetchone()[0] == first   # unchanged row, untouched verdict
-    (tmp_path / "transactions.csv").write_text(HEADER + T1.replace("18.5", "95"))                  # changed row, verdict dropped
+    (tmp_path / "transactions.csv").write_text(HEADER + T1.replace("18.5", "6000"))                # changed row, verdict dropped
     client.post("/data/reload")
     assert conn.execute("select count(*) from verdicts where txn_id='t1'").fetchone()[0] == 0
-    assert client.post("/ledger/audit", json={"company": "demo"}).json()["by_verdict"]["violation"] == 2   # 95 > 35, no pre-approval
+    assert client.post("/ledger/audit", json={"company": "demo"}).json()["by_verdict"]["violation"] == 2   # both over the $5,000 line
 
 
 def test_reload_during_audits_leaves_no_stale_verdicts(tmp_path):

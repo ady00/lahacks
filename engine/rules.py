@@ -70,8 +70,8 @@ def _p(entry) -> float | None:
 
 def facts_from_probs(probs: dict[str, dict], hi: float | None = None, lo: float | None = None) -> dict[str, object]:
     """Jev's per-fact probabilities -> the facts known with confidence. Pure Python, no Z3."""
-    hi = float(os.environ.get("POP_P_HI", 0.85)) if hi is None else hi
-    lo = float(os.environ.get("POP_P_LO", 0.15)) if lo is None else lo
+    hi = float(os.environ.get("POP_P_HI", 0.7)) if hi is None else hi
+    lo = float(os.environ.get("POP_P_LO", 0.3)) if lo is None else lo
     facts = {}
     for name, entry in probs.items():
         spec, p = FACTS.get(name), _p(entry)
@@ -132,6 +132,9 @@ def compile_expr(expr, vars: dict[str, z3.ExprRef]) -> z3.ExprRef:
     if op == "not":
         return z3.Not(compile_expr(arg, vars))
     name, lit = arg
+    if isinstance(name, dict):  # {"per": [fact, by]}: fact/by compared to lit, compiled as fact <op> lit*by (linear: by >= 1)
+        fact, by = name["per"]
+        return _CMP[op](vars[fact], to_z3(fact, lit) * vars[by])
     v = vars[name]  # unknown fact -> KeyError
     if op == "in":
         return z3.Or(*[v == to_z3(name, x) for x in lit])
@@ -149,7 +152,7 @@ def _names(expr) -> set[str]:
         return set().union(*map(_names, arg))
     if op == "not":
         return _names(arg)
-    return {arg[0]}
+    return set(arg[0]["per"]) if isinstance(arg[0], dict) else {arg[0]}
 
 
 class Policy:
@@ -282,7 +285,12 @@ class Policy:
         def doubt(n):
             p = _p(probs.get(n))
             return abs((0.5 if p is None else p) - 0.5)
-        return sorted(asked, key=doubt)
+        # then the unknown numbers and choices some still-open rule reads (no yes/no flip test for those): schema order
+        eqs = list(self._facts_eq(facts).values())
+        open_names = set().union(*(names for r, names in zip(self.rules, self.formula_names)
+                                   if _sat(*self.dom, *eqs, z3.Not(r.formula))))
+        numeric = [n for n, s in FACTS.items() if s.kind != "bool" and not s.derived and n not in facts and n in open_names]
+        return sorted(asked, key=doubt) + numeric
 
     def fix(self, facts: dict) -> list[FixStep] | None:
         return _locked(self._fix, facts)

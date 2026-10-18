@@ -38,7 +38,7 @@ def test_version_is_12_hex_and_stable():
 
 def test_load_policy_reads_both_packs():
     p = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
-    assert {"3.4", "5.2", "IRS-meal"} <= set(p.by_id)
+    assert {"GEN-receipt", "MEAL-client-80", "IRS-meal"} <= set(p.by_id)
 
 def test_validate_value():
     assert validate_value("amount", 12) == 12.0 and validate_value("hour", 3.0) == 3
@@ -62,7 +62,7 @@ def test_reviewer_round_trip_every_kind_and_empty_policy():
         s = z3.Solver(); s.add(p.vars[n] == to_z3(n, v)); assert s.check() == z3.sat
         assert from_z3(n, s.model().eval(p.vars[n], model_completion=True)) == v
     assert z3.simplify(to_z3("amount", 0.1) == z3.Q(1, 10))
-    assert list(FACTS)[:4] == ["role", "expense_kind", "coded_account", "amount"] and list(FACTS)[-1] == "at_company_event"
+    assert list(FACTS)[:4] == ["role", "expense_kind", "coded_account", "amount"] and list(FACTS)[-1] == "government_present"
 
 def _bites(p, rid, **facts):
     s = z3.Solver(); s.add(*p.dom, p.by_id[rid].formula)
@@ -71,7 +71,9 @@ def _bites(p, rid, **facts):
 
 def test_reviewer_thresholds_exact_and_irs_coding():
     p = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
-    assert not _bites(p, "3.4", amount=35, pre_approved=False) and _bites(p, "3.4", amount=35.01, pre_approved=False)
+    assert not _bites(p, "GEN-receipt", amount=50, days_since_purchase=1, receipt_attached=False)
+    assert _bites(p, "GEN-receipt", amount=50.01, days_since_purchase=1, receipt_attached=False)
+    assert not _bites(p, "GEN-receipt", amount=500, days_since_purchase=0, receipt_attached=False)  # not bought yet
     assert not _bites(p, "IRS-receipt-60", days_since_purchase=60, receipt_attached=False)
     assert _bites(p, "IRS-receipt-60", days_since_purchase=61, receipt_attached=False)
     assert _bites(p, "IRS-meal", expense_kind="meal", at_company_event=False, coded_account="meals_100")
@@ -80,7 +82,7 @@ def test_reviewer_thresholds_exact_and_irs_coding():
 
 def test_reviewer_raw_version_unicode_and_threads():
     p = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
-    assert "pre_approved" in json.dumps(p.by_id["3.4"].raw) and "at_company_event" in json.dumps(p.by_id["IRS-meal"].raw)
+    assert "receipt_attached" in json.dumps(p.by_id["GEN-receipt"].raw) and "at_company_event" in json.dumps(p.by_id["IRS-meal"].raw)
     assert p.version == load_policy("engine/demo_policy.json", "engine/irs_pack.json").version
     assert p.version != load_policy("engine/irs_pack.json", "engine/demo_policy.json").version
     u = Policy([{"id": "ü", "layer": "company", "text": "Café ☕ über $35", "when": {"gt": ["amount", 35]}, "require": "pre_approved"}])
@@ -90,34 +92,35 @@ def test_reviewer_raw_version_unicode_and_threads():
     assert versions == {p.version}
 
 # Task 3: check()
-DINNER = dict(role="employee", expense_kind="meal", client_present=True, at_company_event=False,
-              amount=48, hour=19, days_since_purchase=0, pre_approved=False, coded_account="travel")
+# a $200 client dinner for two (over GitLab's $80 a head), miscoded as travel
+DINNER = dict(role="employee", expense_kind="meal", client_present=True, at_company_event=False, traveling=False,
+              government_present=False, amount=200, attendees=2, hour=19, days_since_purchase=0, pre_approved=False,
+              coded_account="travel")
 P = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
 
 def test_dinner_breaks_two_rules_and_cites_facts():
     v = P.check(DINNER)
     assert v.status == "violation"
     by = {x.rule: x.because for x in v.violations}
-    assert by["3.4"] == ["amount", "pre_approved"]
+    assert by["MEAL-client-80"] == ["amount", "attendees", "client_present", "expense_kind"]
     assert set(by["IRS-meal"]) == {"expense_kind", "at_company_event", "coded_account"}
 
 def test_cheap_coded_dinner_is_proven_compliant():
     v = P.check({**DINNER, "amount": 30, "coded_account": "meals_50"})
-    assert v.status == "compliant" and "IRS-meal" in v.applied and "3.4" not in v.applied
+    assert v.status == "compliant" and {"IRS-meal", "MEAL-client-80"} <= set(v.applied) and "GEN-5000" not in v.applied
 
-def test_unknown_pre_approval_is_undetermined():
-    f = {k: v for k, v in DINNER.items() if k != "pre_approved"}
+def test_unknown_attendees_is_undetermined():
+    f = {k: v for k, v in DINNER.items() if k != "attendees"}
     assert P.check({**f, "coded_account": "meals_50"}).status == "undetermined"
 
 def test_check_order_unknown_fact_and_applied_via_solver():
     v = P.check(DINNER)
-    assert [x.rule for x in v.violations] == ["3.4", "IRS-meal"] and v.applied == []
+    assert [x.rule for x in v.violations] == ["MEAL-client-80", "IRS-meal"] and v.applied == []
     assert P.check({}).status == "undetermined"
     with pytest.raises(KeyError): P.check({"colour": "red"})
-    # amount unknown, pre_approved settles 3.4 anyway: compliant, and the solver says 3.4 need not apply
-    # (receipt_attached too: with the full pack an unknown amount could be over 3.5's $500)
-    v = P.check({**{k: x for k, x in DINNER.items() if k != "amount"}, "pre_approved": True, "receipt_attached": True, "coded_account": "meals_50"})
-    assert v.status == "compliant" and "3.4" not in v.applied and "IRS-meal" in v.applied
+    # attendees unknown, but $30 is under $80 a head for any headcount: compliant, applied through the solver
+    v = P.check({**{k: x for k, x in DINNER.items() if k != "attendees"}, "amount": 30, "coded_account": "meals_50"})
+    assert v.status == "compliant" and "MEAL-client-80" in v.applied and "IRS-meal" in v.applied
     # hour unknown but its domain forces the condition: applied through the solver
     p = Policy([{"id": "h", "layer": "company", "text": "t", "when": {"ge": ["hour", 0]}, "require": True}])
     assert p.check({}).applied == ["h"]
@@ -165,10 +168,10 @@ def test_reviewer_check_combination_only_and_out_of_domain():
 
 def test_reviewer_check_empty_policy_and_amount_threshold():
     assert Policy([]).check(DINNER) == ("compliant", [], [])
-    v = P.check({**DINNER, "amount": 35, "coded_account": "meals_50"})  # exactly on 3.4's threshold: not over $35
-    assert v.status == "compliant" and "3.4" not in v.applied
-    v = P.check({**DINNER, "amount": 35.01, "coded_account": "meals_50"})
-    assert [x.rule for x in v.violations] == ["3.4"]
+    v = P.check({**DINNER, "amount": 160, "coded_account": "meals_50"})  # exactly $80 a head for two
+    assert v.status == "compliant" and "GEN-5000" not in v.applied
+    v = P.check({**DINNER, "amount": 160.01, "coded_account": "meals_50"})
+    assert [x.rule for x in v.violations] == ["MEAL-client-80"]
 
 
 def test_concurrent_check_does_not_crash():
@@ -201,11 +204,11 @@ def test_facts_from_probs_thresholds():
     assert facts_from_probs(probs) == {"expense_kind": "meal", "client_present": True, "at_company_event": False}
 
 def test_facts_from_probs_env_and_bad_entries(monkeypatch):
-    probs = {"client_present": {"p": 0.8}, "colour": {"p": 1.0}, "role": {"value": "ceo", "p": 0.99},
+    probs = {"client_present": {"p": 0.6}, "colour": {"p": 1.0}, "role": {"value": "ceo", "p": 0.99},
              "pre_approved": {}, "receipt_attached": {"p": "high"}, "expense_kind": {"value": "meal", "p": True},
              "amount": {"value": 12, "p": 0.99}, "hour": None}
-    assert facts_from_probs(probs) == {}
-    monkeypatch.setenv("POP_P_HI", "0.75")
+    assert facts_from_probs(probs) == {}  # 0.6 is below the 0.7 default
+    monkeypatch.setenv("POP_P_HI", "0.55")
     assert facts_from_probs(probs) == {"client_present": True}
     assert facts_from_probs({"client_present": {"p": 0.85}, "at_company_event": {"p": 0.15}}, hi=0.9, lo=0.1) == {}
 
@@ -226,40 +229,46 @@ def test_resolve_leaves_ambiguous_and_given_accounts_alone():
     assert P.resolve(DINNER) == (DINNER, {})  # already coded (wrongly): resolve never overrides
     assert P.resolve({}) == ({}, {})
 
+RIDE = dict(role="employee", expense_kind="rideshare", amount=180, hour=9, days_since_purchase=0, pre_approved=False,
+            receipt_attached=True, traveling=False, government_present=False)
+
 def test_question_is_asked_only_when_it_decides():
-    ride = dict(role="intern", expense_kind="rideshare", amount=20, hour=9, days_since_purchase=0, pre_approved=True)
-    assert P.questions(ride, {"at_company_event": {"p": 0.4}}) == ["at_company_event"]
-    assert P.questions({k: v for k, v in UNCODED.items() if k != "client_present"}, {}) == []  # 3.4 broken either way
+    assert P.questions(RIDE, {"round_trip": {"p": 0.4}}) == ["round_trip"]
+    assert P.questions({**RIDE, "round_trip": False, "pre_approved": True}, {}) == []  # government_present unknown but no meal
 
 def test_questions_sorted_by_uncertainty():
-    f = dict(role="intern", expense_kind="rideshare", amount=48, hour=9, days_since_purchase=61)
-    probs = {"at_company_event": {"p": 0.2}, "pre_approved": {"p": 0.6}, "receipt_attached": {"p": "?"}}
-    assert P.questions(f, probs) == ["receipt_attached", "pre_approved", "at_company_event"]
+    f = {k: v for k, v in RIDE.items() if k not in ("pre_approved", "receipt_attached")} | {"round_trip": False, "days_since_purchase": 61}
+    probs = {"pre_approved": {"p": 0.6}, "receipt_attached": {"p": "?"}}
+    assert P.questions(f, probs) == ["receipt_attached", "pre_approved"]
+
+def test_numeric_questions_follow_the_yes_no_ones():
+    f = {k: v for k, v in UNCODED.items() if k not in ("amount", "attendees")}
+    assert P.questions(f, {}) == ["amount", "attendees"]  # both open in MEAL-client-80; no yes/no decides it
+    assert P.questions({k: v for k, v in RIDE.items() if k != "amount"}, {}) == ["amount"]  # round trip or not, the amount decides
 
 def test_decide_on_the_demo_dinner():
     d = P.decide(UNCODED, {})
     assert d.facts["coded_account"] == "meals_50" and d.derived == {"coded_account": "IRS-meal"}
-    assert d.verdict.status == "violation" and [v.rule for v in d.verdict.violations] == ["3.4"]
-    assert d.fix == [FixStep("pre_approved", False, True)] and d.questions == []
+    assert d.verdict.status == "violation" and [v.rule for v in d.verdict.violations] == ["MEAL-client-80"]
+    assert d.fix == [FixStep("amount", 200, 160.0)] and d.questions == []
 
 def test_decide_compliant_and_undetermined():
     d = P.decide({**UNCODED, "amount": 30}, {})
     assert d.verdict.status == "compliant" and d.fix == [] and d.questions == []
-    ride = dict(role="intern", expense_kind="rideshare", amount=20, hour=9, days_since_purchase=0, pre_approved=True)
-    d = P.decide(ride, {})
-    assert d.verdict.status == "undetermined" and d.questions == ["at_company_event"] and d.fix == []
-    assert d.facts == {**ride, "coded_account": "travel"} and d.derived == {"coded_account": "IRS-travel"}
+    d = P.decide(RIDE, {})
+    assert d.verdict.status == "undetermined" and d.questions == ["round_trip"] and d.fix == []
+    assert d.facts == {**RIDE, "coded_account": "travel"} and d.derived == {"coded_account": "IRS-travel"}
 
 
 # reviewer edge cases (Task 4)
 def test_reviewer_decide_on_the_threshold_repeated_and_not_aliased():
-    at = {**UNCODED, "amount": 35}
+    at = {**UNCODED, "amount": 160}
     d1, d2 = P.decide(at, {}), P.decide(at, {})
     assert d1 == d2 and d1.verdict.status == "compliant" and d1.facts["coded_account"] == "meals_50"
     d1.facts["amount"] = 999
-    assert at["amount"] == 35 and "coded_account" not in at  # input never mutated, result never aliased
-    v = P.decide({**UNCODED, "amount": 35.01}, {})
-    assert v.verdict.status == "violation" and [x.rule for x in v.verdict.violations] == ["3.4"]
+    assert at["amount"] == 160 and "coded_account" not in at  # input never mutated, result never aliased
+    v = P.decide({**UNCODED, "amount": 160.01}, {})
+    assert v.verdict.status == "violation" and [x.rule for x in v.verdict.violations] == ["MEAL-client-80"]
 
 def test_reviewer_facts_from_probs_odd_entries():
     assert facts_from_probs({}) == {}
@@ -271,27 +280,27 @@ def test_reviewer_facts_from_probs_odd_entries():
 def test_reviewer_decide_empty_facts_and_nan_probs():
     d = P.decide({}, {})
     assert d.verdict.status == "undetermined" and d.derived == {} and d.fix == [] and d.facts == {}
-    f = dict(role="intern", expense_kind="rideshare", amount=48, hour=9, days_since_purchase=61)
-    probs = {"receipt_attached": {"p": float("nan")}, "pre_approved": {"p": 0.0}, "at_company_event": {"p": 0.5}}
-    assert P.questions(f, probs) == ["receipt_attached", "at_company_event", "pre_approved"]
+    f = {k: v for k, v in RIDE.items() if k not in ("pre_approved", "receipt_attached")} | {"round_trip": False, "days_since_purchase": 61}
+    probs = {"receipt_attached": {"p": float("nan")}, "pre_approved": {"p": 0.0}}
+    assert P.questions(f, probs) == ["receipt_attached", "pre_approved"]
 
 
 # Task 5: fix
 from engine.rules import FixStep
-# rule 6.4 (Task 10): entertainment over $100 is never reimbursed; pre-approval cannot help
-ENT = dict(role="employee", expense_kind="entertainment", amount=150, hour=20, days_since_purchase=0,
-           pre_approved=True, receipt_attached=True, coded_account="entertainment_0", client_present=True, at_company_event=False)
+# BOOK-60: books are reimbursable up to $60; pre-approval cannot help, only the amount can
+ENT = dict(role="employee", expense_kind="books", amount=75, hour=20, days_since_purchase=0, pre_approved=True,
+           receipt_attached=True, coded_account="other", client_present=False, at_company_event=False, traveling=False)
+# DEVICE-no: a tablet is never reimbursed and no fact you control changes that
+DEVICE = dict(ENT, expense_kind="personal_device", coded_account="office")
 
-def test_fix_for_the_dinner_is_approval_then_recode():
-    assert P.fix(DINNER) == [FixStep("pre_approved", False, True), FixStep("coded_account", "travel", "meals_50")]
+def test_fix_for_the_dinner_is_amount_then_recode():
+    assert P.fix(DINNER) == [FixStep("amount", 200, 160.0), FixStep("coded_account", "travel", "meals_50")]
 
 def test_no_fix_when_only_immutable_facts_are_wrong():
-    ride = dict(role="intern", expense_kind="rideshare", at_company_event=False, amount=20, hour=9,
-                days_since_purchase=0, pre_approved=True, receipt_attached=True, coded_account="travel")
-    assert P.fix(ride) is None
+    assert P.fix(DEVICE) is None
 
 def test_amount_fix_reads_as_at_or_under():
-    assert P.fix(ENT) == [FixStep("amount", 150, 100.0)]
+    assert P.fix(ENT) == [FixStep("amount", 75, 60.0)]
 
 def test_fix_open_bound_amount_is_whole_cents_and_plain_python():
     p = Policy([{"id": "x", "layer": "company", "text": "t", "when": {"ge": ["amount", 75]}, "require": False}])
@@ -301,13 +310,11 @@ def test_fix_open_bound_amount_is_whole_cents_and_plain_python():
 
 def test_fix_in_decide_and_unknowns_never_reported():
     d = P.decide(ENT, {})
-    assert d.verdict.status == "violation" and d.fix == [FixStep("amount", 150, 100.0)]
-    assert P.decide({**DINNER, "pre_approved": True, "amount": 30}, {}).fix == [FixStep("coded_account", "travel", "meals_50")]
-    ride = dict(role="intern", expense_kind="rideshare", at_company_event=False, amount=20, hour=9,
-                days_since_purchase=0, pre_approved=True, receipt_attached=True)
-    assert P.decide(ride, {}).fix is None
+    assert d.verdict.status == "violation" and d.fix == [FixStep("amount", 75, 60.0)]
+    assert P.decide({**DINNER, "amount": 30}, {}).fix == [FixStep("coded_account", "travel", "meals_50")]
+    assert P.decide({k: v for k, v in DEVICE.items() if k != "coded_account"}, {}).fix is None
     f = {k: v for k, v in DINNER.items() if k != "pre_approved"}  # pre_approved unknown: free, not a step
-    assert P.fix(f) == [FixStep("coded_account", "travel", "meals_50")]
+    assert P.fix(f) == [FixStep("amount", 200, 160.0), FixStep("coded_account", "travel", "meals_50")]
 
 
 # reviewer edge cases (Task 5)
@@ -318,19 +325,19 @@ def test_reviewer_fix_empty_inputs_and_repeat():
         P.fix({**DINNER, "colour": "red"})
 
 def test_reviewer_fix_amount_on_threshold_and_sub_cent():
-    assert P.fix({**ENT, "amount": 100}) == []  # gt 100: exactly 100 is fine
-    assert P.fix({**ENT, "amount": 100.01}) == [FixStep("amount", 100.01, 100.0)]
-    assert P.fix({**ENT, "amount": 100.005}) == [FixStep("amount", 100.005, 100.0)]
+    assert P.fix({**ENT, "amount": 60}) == []  # le 60: exactly 60 is fine
+    assert P.fix({**ENT, "amount": 60.01}) == [FixStep("amount", 60.01, 60.0)]
+    assert P.fix({**ENT, "amount": 60.005}) == [FixStep("amount", 60.005, 60.0)]
 
 def test_reviewer_fix_cheapest_across_rules_and_applied_is_never_a_violation():
     rule = lambda i, w, r: {"id": i, "layer": "company", "text": "t", "when": w, "require": r}
     p = Policy([rule("3.4", {"gt": ["amount", 35]}, "pre_approved"),
                 rule("9.1", {"and": [{"eq": ["expense_kind", "rideshare"]}, {"gt": ["amount", 75]}]}, "pre_approved"),
-                rule("7.2", {"and": [{"eq": ["expense_kind", "hotel"]}, {"gt": ["amount", 300]}]}, "pre_approved"),
+                rule("7.2", {"and": [{"eq": ["expense_kind", "lodging"]}, {"gt": ["amount", 300]}]}, "pre_approved"),
                 rule("8.2", {"and": [{"eq": ["expense_kind", "equipment"]}, {"gt": ["amount", 250]}]},
                      {"and": ["pre_approved", "receipt_attached"]})])
     base = dict(role="employee", amount=80, pre_approved=False, receipt_attached=True)
-    for kind in ("rideshare", "hotel"):
+    for kind in ("rideshare", "lodging"):
         f = {**base, "expense_kind": kind}
         assert p.fix(f) == [FixStep("pre_approved", False, True)]
     eq = {**base, "expense_kind": "equipment", "amount": 300, "receipt_attached": False}
@@ -359,18 +366,22 @@ def test_one_model_check_matches_per_rule_solver_reference():
         if sat(z3.Not(p.all_formulas)): return ("undetermined", [], [])
         return ("compliant", [], [r.id for r in p.rules if not sat(z3.Not(r.when))])
 
-    pick = {"amount": [5, 20, 25, 25.01, 35, 35.01, 74.99, 75, 100, 101, 150, 151, 250, 251, 300, 301, 500, 501],
-            "hour": [0, 5, 6, 12, 21, 22, 23], "days_since_purchase": [0, 1, 14, 15, 60, 61, 75],
-            "tenure_days": [0, 30, 89, 90, 400]}
-    CODE = {"meal": "meals_50", "rideshare": "travel", "airfare": "travel", "hotel": "travel", "software": "office",
-            "equipment": "office", "entertainment": "entertainment_0", "other": "other"}
+    pick = {"amount": [5, 20, 48, 50, 50.01, 60, 61, 74.99, 75, 80, 81, 100, 101, 120, 121, 150, 151, 160, 161, 300, 301, 500, 501, 1500, 1501, 5000, 5001],
+            "hour": [0, 5, 6, 12, 21, 22, 23], "days_since_purchase": [0, 1, 14, 15, 60, 61, 75, 90, 91],
+            "days_before_travel": [0, 6, 7, 13, 14, 30], "tenure_days": [0, 30, 364, 365, 400],
+            "attendees": [1, 2, 3], "nights": [1, 2, 3], "days": [1, 2, 5, 6]}
+    CODE = {"meal": "meals_50", "airfare": "travel", "train": "travel", "car_rental": "travel", "lodging": "travel",
+            "rideshare": "travel", "parking": "travel", "internet": "office", "phone": "office", "coworking": "office",
+            "equipment": "office", "laptop": "office", "personal_device": "office", "office_supplies": "office",
+            "software": "office", "shipping": "office", "books": "other", "development": "other", "gift": "other",
+            "swag": "other", "other": "other"}
     seen = {"compliant": 0, "violation": 0, "undetermined": 0}
     rng = random.Random(10)
     for _ in range(300):
         f = {n: (rng.choice(s.values) if s.kind == "enum" else rng.random() < 0.5 if s.kind == "bool" else rng.choice(pick[n]))
              for n, s in FACTS.items() if rng.random() < 0.85}
         if rng.random() < 0.6:  # lean toward compliant rows so `applied` gets exercised too
-            f.update({n: True for n in ("pre_approved", "receipt_attached") if n in f})
+            f.update({n: True for n in ("pre_approved", "receipt_attached", "approved_issue", "booked_via_navan") if n in f})
             if "coded_account" in f and f.get("expense_kind") in CODE:
                 f["coded_account"] = "meals_100" if f["expense_kind"] == "meal" and f.get("at_company_event") else CODE[f["expense_kind"]]
         v = P.check(f)

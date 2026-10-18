@@ -22,10 +22,12 @@ def test_every_route_answers_as_stub(client, method, path, body):
     assert r.status_code == 200
 
 
-def test_check_stub_is_the_spec_case(client):
-    c = client.post("/check", json=ROUTES[0][2]).json()
+def test_check_stub_is_the_spec_case(client, monkeypatch):
+    from api import cases
+    monkeypatch.setattr(cases, "extract", lambda text: {"expense_kind": {"value": "shipping", "p": 0.95}})
+    c = client.post("/check", json={**ROUTES[0][2], "text": "Ship the demo unit to the client, $140"}).json()
     assert c["verdict"] == "violation"
-    assert c["violations"][0]["rule"] == "3.4"
+    assert c["violations"][0]["rule"] == "SHIP-100"
     assert c["fix"][0] == {"fact": "pre_approved", "from": False, "to": True}
     assert c["awaiting_approval"] is True
 

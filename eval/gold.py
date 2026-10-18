@@ -23,6 +23,11 @@ def ev(expr, facts: dict):
         v = ev(arg, facts)
         return None if v is None else not v
     name, lit = arg
+    if isinstance(name, dict):  # {"per": [fact, by]}: fact / by
+        fact, by = name["per"]
+        if fact not in facts or by not in facts:
+            return None
+        return _CMP[op](facts[fact] / facts[by], lit)
     if name not in facts:
         return None
     return facts[name] in lit if op == "in" else _CMP[op](facts[name], lit)

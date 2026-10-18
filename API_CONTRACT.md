@@ -25,7 +25,7 @@ Interactive docs live at `{API_URL}/docs` (Swagger, try any route in the browser
 | `GEMINI_API_KEY` | B, `eval/baselines.py` |
 | `AGENT_SEED` | B, `agent/agent.py` |
 | `SENTRY_DSN` | C, both API and dashboard |
-| `POP_P_HI`, `POP_P_LO` | A's API reads them (defaults 0.85 and 0.15); B sets them after tuning on the 50-row split |
+| `POP_P_HI`, `POP_P_LO` | A's API reads them (defaults 0.7 and 0.3); B sets them after tuning on the 50-row split |
 
 Copy `.env.example` to `.env`; `.env` is never committed. Python 3.11 and one dependency file, `pyproject.toml` at the repo root: A keeps `z3-solver fastapi uvicorn pydantic pytest httpx sentry-sdk` under `[project.dependencies]`, B appends `pandas typesafe-sdk uagents google-genai` to the same list; install with `pip install -e .`. No auth on any route and CORS is open. A stub response carries the header `X-Stub: 1` until its real route lands, so the agent can tell which one it hit.
 
@@ -106,7 +106,7 @@ Every route that touches a purchase returns this one shape, re-proven by Z3 on e
 | `authorization` | authorization or null | Set after a successful `/authorize`. |
 | `product` | product or null | Set when the text links to a known store (Amazon, Best Buy, Walmart, Target, Apple, Newegg, eBay, B&H, Home Depot, Costco, Staples, Office Depot, Dell, Micro Center, Etsy, IKEA, Wayfair): `{url, vendor, title, price, category, image, error}`. The page price becomes `amount` with source `product` unless an amount was given; the title and category are appended to what the model reads; `error` explains an unreadable page. |
 
-Fact values and types: `role` ∈ employee, contractor, intern · `expense_kind` ∈ meal, rideshare, airfare, hotel, software, equipment, entertainment, other · `coded_account` ∈ meals_50, meals_100, entertainment_0, travel, office, other · `amount` number (USD) · `hour` 0–23 · `days_since_purchase` integer · `tenure_days` integer (days since the employee's `start_date`, source `employee`) · `receipt_attached`, `pre_approved`, `client_present`, `at_company_event` booleans.
+Fact values and types: `role` ∈ employee, contractor, intern · `expense_kind` ∈ airfare, train, car_rental, lodging, rideshare, parking, meal, internet, phone, coworking, equipment, laptop, personal_device, office_supplies, books, development, gift, shipping, software, swag, other · `coded_account` ∈ meals_50, meals_100, travel, office, other · `amount` number (USD) · `hour` 0–23 · `days_since_purchase`, `days_before_travel`, `tenure_days` (days since the employee's `start_date`, source `employee`) integers ≥ 0 · `attendees`, `nights`, `days` integers ≥ 1 · `receipt_attached`, `pre_approved`, `approved_issue`, `booked_via_navan`, `client_present`, `at_company_event`, `traveling`, `round_trip`, `government_present` booleans. A rule may compare a per-unit amount, `{"per": ["amount", "attendees"]}`, in place of a fact name. Questions for integer facts have `options: null` like yes/no ones; the dashboard renders amount, attendees, nights, days and days_before_travel as number inputs.
 
 ## Other response shapes
 
@@ -209,7 +209,7 @@ def coded_account_for(qb_category: str) -> str:
     Unknown category -> "other". Every category in data/SCHEMA.md must map."""
 ```
 
-The API turns probabilities into facts with fixed thresholds: known when `p >= 0.85` or `p <= 0.15`, otherwise unknown and the solver treats it as free. Tune those two numbers on the 50-row tuning split, not inside `extract()`; the API reads them from `POP_P_HI` and `POP_P_LO` in `.env` (defaults 0.85 and 0.15), so tuned values reach `/check` and the audit without a code change.
+The API turns probabilities into facts with fixed thresholds: known when `p >= 0.7` or `p <= 0.3`, otherwise unknown and the solver treats it as free. Tune those two numbers on the 50-row tuning split, not inside `extract()`; the API reads them from `POP_P_HI` and `POP_P_LO` in `.env` (defaults 0.7 and 0.3), so tuned values reach `/check` and the audit without a code change.
 
 **Five files**, all UTF-8, read from the repo root at API startup and again on `POST /data/reload` (no restart needed; the response lists what loaded and what was skipped, with a reason per row). A re-loaded row whose columns or extraction changed drops its cached verdicts and is re-decided; unchanged rows keep theirs:
 

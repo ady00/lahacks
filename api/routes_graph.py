@@ -22,7 +22,9 @@ LABEL = {
     "role": "Role", "expense_kind": "Expense kind", "coded_account": "Coded account", "amount": "Amount",
     "hour": "Hour of purchase", "days_since_purchase": "Days since purchase", "receipt_attached": "Receipt attached",
     "pre_approved": "Pre-approved", "client_present": "Client present", "at_company_event": "At company event",
-    "tenure_days": "Days since start date",
+    "tenure_days": "Days since start date", "days_before_travel": "Days booked ahead", "attendees": "People",
+    "nights": "Nights", "days": "Days covered", "approved_issue": "Approved issue", "booked_via_navan": "Booked via Navan",
+    "traveling": "On a business trip", "round_trip": "Round trip", "government_present": "Government official present",
 }
 _OPS = {"eq": "is", "neq": "is not", "gt": ">", "ge": "≥", "lt": "<", "le": "≤"}
 
@@ -42,6 +44,8 @@ def _text(expr) -> str:
     name, lit = arg
     if op == "in":
         return f"{LABEL.get(name, name)} in {', '.join(map(str, lit))}"
+    if isinstance(name, dict):  # {"per": [fact, by]}
+        name = " per ".join(LABEL.get(n, n) for n in name["per"])
     return f"{LABEL.get(name, name)} {_OPS[op]} {lit}"
 
 

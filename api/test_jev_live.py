@@ -8,7 +8,9 @@ from api import jev_live
 OK = {"model": "jev-1.13.0", "usage": {"input_tokens": 1, "output_tokens": 2}, "answers": {
     "expense_kind": {"type": "choice", "choice": "meal", "confidence": 0.97, "probabilities": {"meal": 0.97}},
     "client_present": {"type": "noul", "noul": 0.91},
-    "at_company_event": {"type": "noul", "noul": 0.08}}}
+    "at_company_event": {"type": "noul", "noul": 0.08},
+    "traveling": {"type": "noul", "noul": 0.1},
+    "government_present": {"type": "noul", "noul": 0.02}}}
 
 
 def _post(monkeypatch, status=200, body=OK):
@@ -18,8 +20,8 @@ def _post(monkeypatch, status=200, body=OK):
 
 def test_shape(monkeypatch):
     _post(monkeypatch)
-    assert jev_live.extract("dinner") == {"expense_kind": {"value": "meal", "p": 0.97},
-                                          "client_present": {"p": 0.91}, "at_company_event": {"p": 0.08}}
+    assert jev_live.extract("dinner") == {"expense_kind": {"value": "meal", "p": 0.97}, "client_present": {"p": 0.91},
+                                          "at_company_event": {"p": 0.08}, "traveling": {"p": 0.1}, "government_present": {"p": 0.02}}
     _, meta = jev_live.extract_with_meta("dinner")
     assert meta["model"] == "jev-1.13.0" and meta["usage"]["output_tokens"] == 2 and meta["latency_ms"] >= 0
 
@@ -79,9 +81,9 @@ def test_reviewer_try_text_local_json_unicode_and_jev_failure(monkeypatch, capsy
     import json
     from api import try_text
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
-    assert try_text.main(["Déjeuner client ☕ 東京, $42", "--local", "--json", "--env", "/dev/null"]) == 0
+    assert try_text.main(["Déjeuner client ☕ 東京, $5,200", "--local", "--json", "--env", "/dev/null"]) == 0
     r = json.loads(capsys.readouterr().out)
-    assert r["facts"]["amount"]["value"] == 42.0 and r["verdict"] == "violation"
+    assert r["facts"]["amount"]["value"] == 5200.0 and r["verdict"] == "violation"  # over the $5,000 procurement line
     assert try_text.main(["x", "--env", "/dev/null"]) == 1
     err = capsys.readouterr().err
     assert err.count("\n") == 1 and "TYPESAFE_API_KEY not set" in err

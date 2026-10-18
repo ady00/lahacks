@@ -8,6 +8,9 @@ import { headline, usd } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { btn, btnPrimary, input } from "@/lib/ui";
 
+// the numeric questions the engine can ask (api/explain.py); every other question is yes/no or an enum
+const NUMERIC = new Set(["amount", "attendees", "nights", "days", "days_before_travel"]);
+
 // Every button is a native form to /act/<verb>; the API re-proves and this page re-renders whatever it says.
 export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
   await requireUser();
@@ -18,6 +21,7 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
   const choices = q ? (q.options ?? ["true", "false"]) : [];
   const { title, next } = headline(c);
   const amount = c.facts.amount?.value;
+  const numeric = q && NUMERIC.has(q.fact);
   return (
     <div className="animate-fade-in-up space-y-6">
       <PageHeader title={title} text={next}>
@@ -25,14 +29,13 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
         <a href="/" className={btn}>Check another purchase</a>
       </PageHeader>
       <PurchaseGraph key={graph?.base_facts_hash ?? JSON.stringify(c.facts)} initialGraph={graph} awaitingApproval={c.awaiting_approval}>
-      {q && q.fact === "amount" ? (
-        // the one numeric question the engine asks (api/explain.py); every other question is yes/no or an enum
+      {q && numeric ? (
         <form method="post" action="/act/answer" className="animate-fade-in flex flex-wrap items-end gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-5 shadow-xs">
           <input type="hidden" name="case_id" value={c.case_id} />
-          <input type="hidden" name="fact" value="amount" />
+          <input type="hidden" name="fact" value={q.fact} />
           <label className="text-sm font-medium text-amber-950">
             {q.text}
-            <input name="value" type="number" step="0.01" min="0.01" required className={`${input} mt-1.5`} />
+            <input name="value" type="number" step={q.fact === "amount" ? "0.01" : "1"} min={q.fact === "amount" ? "0.01" : q.fact === "days_before_travel" ? "0" : "1"} required className={`${input} mt-1.5`} />
           </label>
           <button className={btnPrimary}>Submit Answer</button>
         </form>

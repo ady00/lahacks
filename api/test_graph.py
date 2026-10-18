@@ -1,7 +1,14 @@
+import pytest
+
 from engine.schema import FACTS
 
-DINNER = {"text": "Client dinner Thursday with Acme's CFO, about $48.", "employee_id": "e_newhire",
-          "timestamp": "2026-10-15T19:30:00-07:00"}
+DINNER = {"text": "Ship the demo unit to the client, $140", "employee_id": "e_newhire"}
+
+
+@pytest.fixture(autouse=True)
+def shipping(monkeypatch):
+    from api import cases
+    monkeypatch.setattr(cases, "extract", lambda t: {"expense_kind": {"value": "shipping", "p": 0.95}, "client_present": {"p": 0.05}})
 
 
 def _check(client):
@@ -15,18 +22,19 @@ def test_graph_mirrors_the_case(client):
     assert g["facts_hash"] == g["base_facts_hash"]
     facts = {n["name"]: n for n in g["nodes"] if n["kind"] == "fact"}
     assert set(facts) == set(FACTS)                       # every schema fact is a node, known or not
-    assert facts["amount"]["known"] and facts["amount"]["value"] == 48
+    assert facts["amount"]["known"] and facts["amount"]["value"] == 140
     assert facts["receipt_attached"]["known"] is False and facts["receipt_attached"]["value"] is None
     assert facts["client_present"]["probability_kind"] == "p_true"
     assert facts["expense_kind"]["probability_kind"] == "value_confidence"
     rules = {n["rule_id"]: n for n in g["nodes"] if n["kind"] == "rule"}
-    assert rules["3.4"]["status"] == "violated" and set(rules["3.4"]["evidence_facts"]) == {"amount", "pre_approved"}
-    assert rules["5.1"]["status"] == "inactive"            # contractor rule: the role is employee
-    assert rules["3.4"]["condition"] == "Amount > 35" and rules["3.4"]["requirement"] == "Pre-approved"
-    edge = next(e for e in g["edges"] if e["id"] == "amount->3.4")
+    assert rules["SHIP-100"]["status"] == "violated" and set(rules["SHIP-100"]["evidence_facts"]) == {"amount", "expense_kind", "pre_approved"}
+    assert rules["MEAL-when"]["status"] == "inactive"      # meal rule: the kind is shipping
+    assert rules["SHIP-100"]["condition"] == "Expense kind is shipping and Amount > 100" and rules["SHIP-100"]["requirement"] == "Pre-approved"
+    assert rules["LODGE-300"]["condition"] == "Expense kind is lodging and Amount per Nights > 300"
+    edge = next(e for e in g["edges"] if e["id"] == "amount->SHIP-100")
     assert edge["relation"] == "condition" and edge["contradiction_evidence"] is True
-    assert any(e["target"] == "verdict" and e["source"] == "3.4" for e in g["edges"])
-    assert not any(e["source"] == "5.1" for e in g["edges"] if e["target"] == "verdict")
+    assert any(e["target"] == "verdict" and e["source"] == "SHIP-100" for e in g["edges"])
+    assert not any(e["source"] == "MEAL-when" for e in g["edges"] if e["target"] == "verdict")
     assert "coded_account" not in {f["name"] for f in g["editable_fields"]}
     assert g["fix"] == c["fix"]
 

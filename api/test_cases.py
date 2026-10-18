@@ -4,32 +4,34 @@ from zoneinfo import ZoneInfo
 from api import cases
 
 TS = datetime.now(ZoneInfo("America/Los_Angeles")).replace(hour=19, minute=30).isoformat()
-# today at 19:30: hour is fixed so rules 6.1/6.2 never depend on when the suite runs, and days_since_purchase
-# stays 0 so rule 4.1 (receipt due after 14 days) never wakes up on a later date. Every /check below passes TS.
+# today at 19:30: days_since_purchase stays 0 so the receipt rules (which wait for the purchase) never wake up
+# on a later date. Every /check below passes TS.
+RIDE = lambda t: {"expense_kind": {"value": "rideshare", "p": 0.95}, "round_trip": {"p": 0.05}}
 
 
-def test_demo_flow_check_approve_authorize(client):
-    c = client.post("/check", json={"text": "Client dinner Thursday with Acme's CFO, about $48.", "employee_id": "e_newhire", "timestamp": TS}).json()
-    assert c["verdict"] == "violation" and [v["rule"] for v in c["violations"]] == ["3.4"]
-    assert c["facts"]["coded_account"] == {"value": "meals_50", "source": "rules", "p": None}
+def test_demo_flow_check_approve_authorize(client, monkeypatch):
+    monkeypatch.setattr(cases, "extract", RIDE)
+    c = client.post("/check", json={"text": "Uber from LAX to the client's office, about $180.", "employee_id": "e_newhire", "timestamp": TS}).json()
+    assert c["verdict"] == "violation" and [v["rule"] for v in c["violations"]] == ["RIDE-150"]
+    assert c["facts"]["coded_account"] == {"value": "travel", "source": "rules", "p": None}
     assert c["facts"]["amount"]["source"] == "text" and c["awaiting_approval"] is True
     assert client.get("/cases", params={"awaiting_approval": "true"}).json()["cases"][0]["case_id"] == c["case_id"]
     assert client.post(f"/cases/{c['case_id']}/authorize").status_code == 409
     a = client.post(f"/cases/{c['case_id']}/approve", json={"approver": "e_manager", "approved": True}).json()
     assert a["verdict"] == "compliant" and a["awaiting_approval"] is False and a["approval"]["approver"] == "e_manager"
     auth = client.post(f"/cases/{c['case_id']}/authorize").json()
-    assert auth["amount_limit"] == 48 and auth["merchant_category"] == "5812 Eating places" and len(auth["proof_hash"]) == 64
+    assert auth["amount_limit"] == 180 and auth["merchant_category"] == "4121 Taxicabs and rideshare" and len(auth["proof_hash"]) == 64
     assert client.post(f"/cases/{c['case_id']}/authorize").json()["auth_id"] == auth["auth_id"]
     assert client.get(f"/cases/{c['case_id']}").json()["authorization"]["auth_id"] == auth["auth_id"]
     assert client.get("/cases", params={"awaiting_approval": "true"}).json()["cases"] == []
 
 
 def test_answer_settles_an_undetermined_case(client, monkeypatch):
-    monkeypatch.setattr(cases, "extract", lambda t: {"expense_kind": {"value": "rideshare", "p": 0.95}, "at_company_event": {"p": 0.5}})
-    c = client.post("/check", json={"text": "Lyft to the offsite", "employee_id": "e_intern", "amount": 20, "timestamp": TS}).json()
-    assert c["verdict"] == "undetermined" and c["questions"][0]["fact"] == "at_company_event"
-    a = client.post(f"/cases/{c['case_id']}/answer", json={"fact": "at_company_event", "value": True}).json()
-    assert a["verdict"] == "compliant" and a["facts"]["at_company_event"]["source"] == "answer"
+    monkeypatch.setattr(cases, "extract", lambda t: {"expense_kind": {"value": "rideshare", "p": 0.95}, "round_trip": {"p": 0.5}})
+    c = client.post("/check", json={"text": "Lyft to the offsite and back", "employee_id": "e_intern", "amount": 180, "timestamp": TS}).json()
+    assert c["verdict"] == "undetermined" and c["questions"][0]["fact"] == "round_trip"
+    a = client.post(f"/cases/{c['case_id']}/answer", json={"fact": "round_trip", "value": True}).json()
+    assert a["verdict"] == "compliant" and a["facts"]["round_trip"]["source"] == "answer"
 
 
 def test_review_focus_edges(client):
@@ -47,19 +49,19 @@ def test_review_focus_edges(client):
 
 
 def test_authorize_needs_a_known_amount(client):
-    # compliant with the price never given: approve, then attach the receipt; the card still cannot be issued
+    # the price never given: the $5,000 procurement line keeps it undetermined, so no card can be issued
     c = client.post("/check", json={"text": "Team dinner, not sure of the price", "employee_id": "e_newhire", "timestamp": TS}).json()
     client.post(f"/cases/{c['case_id']}/approve", json={"approver": "e_manager", "approved": True})
     a = client.post(f"/cases/{c['case_id']}/answer", json={"fact": "receipt_attached", "value": True}).json()
-    assert a["verdict"] == "compliant" and "amount" not in a["facts"]
+    assert a["verdict"] == "undetermined" and "amount" not in a["facts"] and a["questions"][0]["fact"] == "amount"
     r = client.post(f"/cases/{c['case_id']}/authorize")
-    assert r.status_code == 409 and r.json()["detail"] == "amount unknown"
+    assert r.status_code == 409 and r.json()["detail"] == "not compliant"
 
 
 def test_date_only_timestamp_leaves_hour_unknown(client):
     c = client.post("/check", json={"text": "Team dinner $20", "employee_id": "e_newhire", "timestamp": TS[:10]}).json()
     assert "hour" not in c["facts"]
-    assert c["verdict"] == "undetermined"   # a $20 meal is fine at 19:00 and needs approval at 23:00; with the hour free the solver cannot decide
+    assert c["verdict"] == "compliant"   # GitLab's policy has no time-of-day rule, so the free hour decides nothing
 
 
 def test_parse_amount():
@@ -84,7 +86,7 @@ def test_decide_transaction_takes_a_raw_csv_row():
            "receipt_attached": "1", "receipt_date": "2026-09-21", "source": "intuit"}
     ext = {"expense_kind": {"value": "meal", "p": 0.95}, "client_present": {"p": 0.5}, "at_company_event": {"p": 0.05}}
     c = cases.decide_transaction(row, ext, False, {"role": "employee"})
-    assert c["verdict"] == "violation" and {"3.4", "IRS-meal"} <= {v["rule"] for v in c["violations"]}
+    assert c["verdict"] == "violation" and {"IRS-meal"} <= {v["rule"] for v in c["violations"]}
     assert c["facts"]["days_since_purchase"]["value"] == 1 and c["facts"]["coded_account"]["source"] == "ledger"
     u = cases.decide_transaction({**row, "receipt_attached": "", "timestamp": "2026-09-20"}, None, False, None)
     assert "receipt_attached" not in u["facts"] and "hour" not in u["facts"] and "role" not in u["facts"]
@@ -116,8 +118,9 @@ assert all(s == 200 for o in out for s in o), out
     assert r.returncode == 0, (r.returncode, r.stderr[-2000:])
 
 
-def test_reviewer_rejected_approval_stays_a_violation(client):
-    c = client.post("/check", json={"text": "Client dinner $48", "employee_id": "e_newhire", "timestamp": TS}).json()
+def test_reviewer_rejected_approval_stays_a_violation(client, monkeypatch):
+    monkeypatch.setattr(cases, "extract", RIDE)
+    c = client.post("/check", json={"text": "Uber to the client $180", "employee_id": "e_newhire", "timestamp": TS}).json()
     a = client.post(f"/cases/{c['case_id']}/approve", json={"approver": "e_manager", "approved": False}).json()
     assert a["verdict"] == "violation" and a["awaiting_approval"] is False and a["approval"]["approved"] is False
     r = client.post(f"/cases/{c['case_id']}/authorize")

@@ -19,8 +19,17 @@ export function when(iso: string | null | undefined): string {
 const FACT_LABELS: Record<string, string> = {
   role: "Role",
   expense_kind: "Expense type",
-  client_present: "Client present",
-  at_company_event: "At a company event",
+  client_present: "Client or partner present",
+  at_company_event: "At a team event",
+  traveling: "On a business trip",
+  government_present: "Government official present",
+  round_trip: "Round trip",
+  booked_via_navan: "Booked through Navan",
+  approved_issue: "Approved issue attached",
+  days_before_travel: "Days booked ahead",
+  attendees: "People",
+  nights: "Nights",
+  days: "Days covered",
   amount: "Amount",
   hour: "Hour of day",
   days_since_purchase: "Days since purchase",
@@ -53,6 +62,7 @@ const SOURCES: Record<string, string> = {
   answer: "answered here",
   user: "answered here",
   product: "product page",
+  claude: "inferred from the description",
 };
 export const sourceLabel = (s: string) => SOURCES[s] ?? s;
 
@@ -110,7 +120,8 @@ export function expr(e: unknown): string {
     return `${factLabel(f)} is one of ${vs.map((v) => valueText(f, v)).join(", ")}`;
   }
   if (op in OPS) {
-    const [f, v] = arg as [string, unknown];
+    const [f, v] = arg as [string | { per: [string, string] }, unknown];
+    if (typeof f === "object") return `${factLabel(f.per[0])} per ${factLabel(f.per[1]).toLowerCase()} ${OPS[op]} ${valueText(f.per[0], v)}`;
     if (op === "eq" && typeof v === "boolean") return v ? factLabel(f) : `not ${factLabel(f)}`;
     return `${factLabel(f)} ${OPS[op]} ${valueText(f, v)}`;
   }

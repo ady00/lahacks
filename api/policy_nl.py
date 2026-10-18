@@ -36,9 +36,10 @@ Expressions: a bare fact name (bool facts only), true/false, or one of
   {{"and": [e, e, ...]}}  {{"or": [e, e, ...]}}  {{"not": e}}
   {{"eq": [fact, value]}}  {{"neq": [fact, value]}}  {{"gt": [fact, n]}}  {{"ge": [fact, n]}}  {{"lt": [fact, n]}}  {{"le": [fact, n]}}
   {{"in": [fact, [value, ...]]}}
+A per-unit limit compares {{"per": [fact, by]}} in place of a fact, e.g. {{"le": [{{"per": ["amount", "attendees"]}}, 80]}} is "$80 per person".
 Facts (use only these names and values):
 {facts}
-Notes: "manager approval / pre-approval / sign-off" is pre_approved. "receipt" is receipt_attached. Times of day are `hour` (0-23).
+Notes: "manager approval / pre-approval / sign-off" is pre_approved. "an approved issue" (G&D, IT) is approved_issue. "receipt" is receipt_attached. Times of day are `hour` (0-23).
 Deductibility or posting rules set coded_account. A prohibition is "require": false. Amounts are USD numbers.
 
 Examples:

@@ -41,7 +41,7 @@ One FastAPI server holds all of the logic. The Next.js dashboard, the text-messa
                                  ▼
   ┌──────────────────────────────────────────────────────────────┐
   │ 2. DECIDE  (Z3)                                              │
-  │   27 rules, each  when(facts) ⇒ require(facts)               │
+  │   37 rules, each  when(facts) ⇒ require(facts)               │
   │   • unknown facts stay free variables                        │
   │   • violation  → every broken rule + its unsat core          │
   │   • compliant  → the rules that applied and held             │
@@ -69,9 +69,9 @@ One FastAPI server holds all of the logic. The Next.js dashboard, the text-messa
   └──────────────────────────────────────────────────────────────┘
 ```
 
-**1. Read.** The request text goes to [Jev](https://typesafe.ai) (Typesafe's "System One" model) with one typed question per fact: a `choice` question for the expense kind, and `noul` (yes/no) questions for *client present* and *at company event*. Jev returns calibrated probabilities, never free text. A probability at or above 0.85 (or at or below 0.15) becomes a known fact; anything in between stays **unknown**. Amount, time of day, days since purchase, role, tenure and prior approvals come from the form, the clock and the employee records, never from a model. The exact question wording lives in [api/jev_live.py](api/jev_live.py) and was tuned on a labeled set with [api/bench_jev.py](api/bench_jev.py) (45/45 expense kinds, zero confidently-wrong booleans). Without a `TYPESAFE_API_KEY` a keyword stub stands in, and the dashboard labels those facts as read from text rather than from the model.
+**1. Read.** The request text goes to [Jev](https://typesafe.ai) (Typesafe's "System One" model) with one typed question per fact: a `choice` question for the expense kind, and `noul` (yes/no) questions for *client present*, *at a team event*, *on a business trip* and *government official present*. Jev returns calibrated probabilities, never free text. A probability at or above 0.7 (or at or below 0.3) becomes a known fact; anything in between stays **unknown**. Amount, time of day, days since purchase, role, tenure and prior approvals come from the form, the clock and the employee records, never from a model. The exact question wording lives in [api/jev_live.py](api/jev_live.py) and was tuned on a labeled set with [api/bench_jev.py](api/bench_jev.py) (45/45 expense kinds, zero confidently-wrong booleans). Without a `TYPESAFE_API_KEY` a keyword stub stands in, and the dashboard labels those facts as read from text rather than from the model.
 
-**2. Decide.** Every rule is JSON of the form `when ⇒ require` over eleven typed facts (see [engine/demo_policy.json](engine/demo_policy.json) and [engine/irs_pack.json](engine/irs_pack.json)). [engine/rules.py](engine/rules.py) compiles the packs once into Z3 formulas. For a case, the known facts are asserted as equalities and unknown facts are left free:
+**2. Decide.** Every rule is JSON of the form `when ⇒ require` over twenty typed facts (see [engine/demo_policy.json](engine/demo_policy.json) and [engine/irs_pack.json](engine/irs_pack.json)). The company layer is GitLab's public [Global Travel and Expense Policy](https://handbook.gitlab.com/handbook/finance/expenses/), 30 rules; per-person and per-night limits compare `{"per": [fact, by]}`, which compiles to linear arithmetic. [engine/rules.py](engine/rules.py) compiles the packs once into Z3 formulas. For a case, the known facts are asserted as equalities and unknown facts are left free:
 
 - If no assignment of the unknowns satisfies all rules, the verdict is **violation**. Each failing rule is re-checked with tracked assumptions and `core.minimize` so the unsat core names exactly the facts that decided it ("amount, pre_approved").
 - If every assignment satisfies all rules, the verdict is **compliant**, and the rules whose conditions held are listed as applied.
@@ -131,7 +131,7 @@ Every posted transaction, checked by the same rules as a new purchase. The summa
 
 ### Policy Studio: rules in plain English, proven consistent
 
-Type a policy sentence. Claude turns it into a `when ⇒ require` rule over the known facts, Z3 compiles it, checks it against the other 27 rules for conflicts and dead conditions, and shows the result before anything is saved. **Save & Activate** swaps the live policy; the next check proves against it. The page also proves the whole policy consistent: no rule that can never fire, no two rules that disagree on the same purchase (with a concrete example when they do).
+Type a policy sentence. Claude turns it into a `when ⇒ require` rule over the known facts, Z3 compiles it, checks it against the other 37 rules for conflicts and dead conditions, and shows the result before anything is saved. **Save & Activate** swaps the live policy; the next check proves against it. The page also proves the whole policy consistent: no rule that can never fire, no two rules that disagree on the same purchase (with a concrete example when they do).
 
 ![Policy Studio](docs/screenshots/rules.png)
 
@@ -224,7 +224,7 @@ Natural-language rule drafting on the Policy page shells out to the Claude Code 
 
 ```
 engine/      rules.py (Z3: check, fix, questions, audit), bank_rules.py (string theory),
-             schema.py (the eleven facts), demo_policy.json + irs_pack.json (27 rules), keyword_baseline.py
+             schema.py (the twenty facts), demo_policy.json (GitLab's policy) + irs_pack.json (37 rules), keyword_baseline.py
 api/         FastAPI: routes_cases (check/answer/approve/authorize), routes_graph, routes_ledger,
              routes_policy (+ policy_nl.py), routes_bank, routes_eval, routes_employees; db.py (SQLite);
              jev_live.py (Typesafe client), try_text.py and bench_jev.py (CLIs)

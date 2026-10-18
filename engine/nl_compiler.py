@@ -55,12 +55,10 @@ def _heuristic_compile_to_ast(prompt: str) -> Dict[str, Any]:
         kinds.append("rideshare")
     if any(k in p_lower for k in ["flight", "airfare", "airline"]):
         kinds.append("airfare")
-    if any(k in p_lower for k in ["hotel", "lodging"]):
-        kinds.append("hotel")
+    if any(k in p_lower for k in ["hotel", "lodging", "airbnb"]):
+        kinds.append("lodging")
     if any(k in p_lower for k in ["laptop", "monitor", "equipment", "hardware"]):
         kinds.append("equipment")
-    if any(k in p_lower for k in ["entertainment", "concert", "game", "tickets"]):
-        kinds.append("entertainment")
 
     if len(kinds) == 1:
         when_clauses.append({"eq": ["expense_kind", kinds[0]]})

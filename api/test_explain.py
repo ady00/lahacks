@@ -6,19 +6,19 @@ from engine.rules import Decision, FixStep, Verdict, load_policy
 
 _E = Path(engine.__file__).parent
 P = load_policy(_E / "demo_policy.json", _E / "irs_pack.json")
-DINNER = dict(role="employee", expense_kind="meal", client_present=True, at_company_event=False,
-              amount=48, hour=19, days_since_purchase=0, pre_approved=False, coded_account="travel")
+DINNER = dict(role="employee", expense_kind="meal", client_present=True, at_company_event=False, traveling=False,
+              government_present=False, amount=200, attendees=2, hour=19, days_since_purchase=0, pre_approved=False, coded_account="travel")
 UNCODED = {k: v for k, v in DINNER.items() if k != "coded_account"}
 
 
 def test_dinner_explanation_is_templated():
     d = P.decide(UNCODED, {})
-    assert explain(d, P.by_id, []) == ("Any expense over $35 needs manager pre-approval (rule 3.4): amount $48, no pre-approval. "
-                                       "Fix: get manager pre-approval. Post it as meals_50 (IRS-meal).")
+    assert explain(d, P.by_id, []) == ("Meals with clients and partners are limited to $80 per person (rule MEAL-client-80): "
+                                       "amount $200, 2 people, client present, meal. Fix: keep it at or under $160. Post it as meals_50 (IRS-meal).")
 
 
 def test_question_for_enum_carries_options():
-    assert question("expense_kind", None)["options"][0] == "meal"
+    assert question("expense_kind", None)["options"][0] == "airfare"
     assert question("receipt_attached", 0.5) == {"fact": "receipt_attached", "text": "Do you have the receipt?", "p": 0.5, "options": None}
     assert question("hour", None)["text"] == "What is hour?"
 
@@ -30,8 +30,8 @@ def test_compliant_explanation():
 
 
 def test_undetermined_names_the_question():
-    d = P.decide({k: v for k, v in UNCODED.items() if k != "pre_approved"}, {})
-    assert d.verdict.status == "undetermined" and d.questions
+    d = P.decide({k: v for k, v in UNCODED.items() if k != "attendees"}, {})
+    assert d.verdict.status == "undetermined" and d.questions == ["attendees"]
     assert explain(d, P.by_id, []).startswith("Depends on: ")
     bare = Decision({}, {}, Verdict("undetermined", [], []), [], [])
     assert explain(bare, P.by_id, []) == "Depends on: a fact we don't know yet."
@@ -53,20 +53,19 @@ def test_phrases():
     assert fix_phrase(FixStep("receipt_attached", None, False)) == "set receipt_attached to False"
 
 
-def test_reviewer_entertainment_over_100_amount_fix_and_threshold():
-    ent = {**UNCODED, "expense_kind": "entertainment", "amount": 150, "pre_approved": True, "receipt_attached": True}
-    s = explain(P.decide(ent, {}), P.by_id, [])
-    assert s == ("Entertainment over $100 is never reimbursed (rule 6.4): amount $150, entertainment. "
-                 "Fix: keep it at or under $100. Post it as entertainment_0 (IRS-ent).")
-    assert "rule 6.4" not in explain(P.decide({**ent, "amount": 100}, {}), P.by_id, [])
+def test_reviewer_books_over_60_amount_fix_and_threshold():
+    book = {**UNCODED, "expense_kind": "books", "client_present": False, "amount": 75, "pre_approved": True, "receipt_attached": True}
+    s = explain(P.decide(book, {}), P.by_id, [])
+    assert s == ("Books are reimbursable up to $60 a year (rule BOOK-60): amount $75, books. "
+                 "Fix: keep it at or under $60. Post it as other (IRS-other).")
+    assert "rule BOOK-60" not in explain(P.decide({**book, "amount": 60}, {}), P.by_id, [])
 
 
 def test_reviewer_undetermined_strings_are_clean_and_repeatable():
-    ride = {**UNCODED, "role": "intern", "expense_kind": "rideshare", "client_present": False, "receipt_attached": True, "amount": 20}
-    ride.pop("at_company_event")
+    ride = {**UNCODED, "expense_kind": "rideshare", "client_present": False, "receipt_attached": True, "amount": 180}
     d = P.decide(ride, {})
     s = explain(d, P.by_id, [])
-    assert s == "Depends on: Was this at a company-wide event? Post it as travel (IRS-travel)."
+    assert s == "Depends on: Is this a round trip? Post it as travel (IRS-travel)."
     assert explain(d, P.by_id, []) == s
     no_amt = P.decide({k: v for k, v in UNCODED.items() if k != "amount"} | {"receipt_attached": True}, {})
     s2 = explain(no_amt, P.by_id, ["amount"])
@@ -78,5 +77,5 @@ def test_reviewer_undetermined_strings_are_clean_and_repeatable():
 def test_reviewer_phrase_edges():
     assert phrase("hour", 7) == "at 7:00" and phrase("days_since_purchase", 0) == "0 days ago"
     assert phrase("amount", 100.0) == "amount $100" and phrase("expense_kind", "café") == "café"
-    assert phrase("client_present", False) == "client_present False"
+    assert phrase("client_present", False) == "no client present" and phrase("attendees", 3) == "3 people"
     assert question("amount", None) == {"fact": "amount", "text": "What is the amount in dollars?", "p": None, "options": None}

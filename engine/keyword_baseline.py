@@ -5,16 +5,29 @@ from zoneinfo import ZoneInfo
 
 LA = ZoneInfo("America/Los_Angeles")
 
-CODED_FALLBACK = {"Meals": "meals_50", "Travel": "travel", "Office": "office", "Entertainment": "entertainment_0"}
+CODED_FALLBACK = {"Meals": "meals_50", "Travel": "travel", "Office": "office", "Entertainment": "other"}
 
 _KINDS = [  # first match wins, order is the contract
-    ("meal", r"dinner|lunch|breakfast|meal|restaurant|coffee|drinks|catering|pizza|snacks"),
-    ("rideshare", r"uber|lyft|taxi|cab|waymo|ride"),
+    ("laptop", r"laptop|macbook"),
+    ("phone", r"phone (bill|service|plan)|cell(ular)? (service|plan|bill)|mobile plan|verizon|t-mobile"),
+    ("personal_device", r"\bphone\b|iphone|ipad|tablet|smart ?watch|apple watch|smart speaker|smart tv|router|mesh|extender|treadmill|walking pad"),
+    ("internet", r"internet|wifi|wi-fi|broadband|comcast"),
+    ("coworking", r"cowork|co-work|wework|day pass|office space"),
     ("airfare", r"flight|airfare|airline|plane"),
-    ("hotel", r"hotel|lodging|airbnb"),
-    ("software", r"subscription|saas|license|software|seat|plan"),
-    ("equipment", r"laptop|monitor|keyboard|webcam|charger|desk|equipment"),
-    ("entertainment", r"tickets|concert|game|show|golf|outing"),
+    ("train", r"\btrain\b|amtrak|\brail\b|eurostar"),
+    ("car_rental", r"rental car|car rental|rent a car|hertz|avis"),
+    ("lodging", r"hotel|lodging|airbnb|motel|marriott|hilton"),
+    ("rideshare", r"uber|lyft|taxi|\bcab\b|waymo|\bride\b"),
+    ("parking", r"parking|toll"),
+    ("meal", r"dinner|lunch|breakfast|meal|restaurant|coffee|drinks|catering|pizza|snacks"),
+    ("gift", r"gift|flowers"),
+    ("swag", r"swag|stickers|t-shirts|giveaway|merch"),
+    ("shipping", r"shipping|postage|fedex|\bups\b|usps|courier|customs"),
+    ("books", r"\bbooks?\b|e-book|audiobook|kindle"),
+    ("development", r"conference|training|tuition|certification|workshop|membership|\bdues\b|udemy|coursera"),
+    ("software", r"subscription|saas|license|software|seat|\bplan\b|\bvpn\b"),
+    ("equipment", r"monitor|keyboard|webcam|charger|desk|chair|headset|microphone|mouse|dock|equipment"),
+    ("office_supplies", r"\bink\b|toner|paper|stapler|pens|notebook|supplies"),
 ]
 
 
@@ -23,8 +36,10 @@ def extract_stub(text: str) -> dict[str, dict]:
     kind = next((k for k, rx in _KINDS if re.search(rx, text)), None)
     return {
         "expense_kind": {"value": kind or "other", "p": 0.9 if kind else 0.5},
-        "client_present": {"p": 0.9 if re.search(r"client|customer|cfo|ceo|prospect|investor", text) else 0.5},
-        "at_company_event": {"p": 0.9 if re.search(r"offsite|all-hands|company event|team event|team outing|kickoff|holiday party", text) else 0.1},
+        "client_present": {"p": 0.9 if re.search(r"client|customer|cfo|ceo|prospect|investor|partner", text) else 0.5},
+        "at_company_event": {"p": 0.9 if re.search(r"offsite|all-hands|company event|team event|team outing|team dinner|team lunch|kickoff|holiday party|team building", text) else 0.1},
+        "traveling": {"p": 0.9 if re.search(r"\btrip\b|travel|flight|hotel|airbnb|on-?site|visiting|conference|out of town", text) else 0.1},
+        "government_present": {"p": 0.9 if re.search(r"government|federal|agency|official|public sector|city of|state of|\bdod\b", text) else 0.1},
     }
 
 
@@ -52,6 +67,9 @@ def _parse(ts: str | None) -> tuple[date | None, int | None]:
 
 def keyword_verdict(txn: dict, pre_approved: bool = False) -> dict:
     """Keyword rules with every Task 10 threshold as a literal predicate; never says undetermined.
+
+    ponytail: still the original demo policy (rules 3.4-10.3), not the GitLab pack; the eval baseline
+    needs a rewrite before the next eval run.
 
     Each predicate is True when the rule is violated. Inputs the baseline does not know
     (missing amount, date-only hour) make the rule not fire.
