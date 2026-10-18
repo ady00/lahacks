@@ -2,6 +2,8 @@ import { get } from "@/lib/api";
 import { requireUser } from "@/lib/session";
 import type { Case } from "@/lib/types";
 import { CaseCard } from "@/components/CaseCard";
+import { PurchaseGraph } from "@/components/PurchaseGraph";
+import type { CaseGraph } from "@/lib/graph";
 import { btn, btnPrimary, h1, input } from "@/lib/ui";
 
 // Every button is a native form to /act/<verb>; the API re-proves and this page re-renders whatever it says.
@@ -9,12 +11,13 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
   await requireUser();
   const { id } = await params;
   const c = await get<Case>(`/cases/${id}`);
+  const graph = await get<CaseGraph>(`/cases/${id}/graph`, 12000).catch(() => null);
   const q = c.questions[0];
   const choices = q ? (q.options ?? ["true", "false"]) : [];
   return (
     <div className="space-y-6">
-      {c.awaiting_approval && <meta httpEquiv="refresh" content="5" />}
       <h1 className={h1}>{`Case ${c.case_id}`}</h1>
+      <PurchaseGraph key={graph?.base_facts_hash ?? JSON.stringify(c.facts)} initialGraph={graph} awaitingApproval={c.awaiting_approval}>
       <CaseCard c={c} />
 
       {q && q.fact === "amount" ? (
@@ -50,6 +53,7 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
           <button className={btnPrimary}>Authorize card</button>
         </form>
       )}
+      </PurchaseGraph>
     </div>
   );
 }

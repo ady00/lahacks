@@ -4,7 +4,7 @@ import { connection } from "next/server";
 // (the https dashboard → http Vultr hop would be blocked as mixed content).
 export const API_URL = process.env.API_URL ?? "http://localhost:8000";
 
-async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+async function call<T>(method: "GET" | "POST", path: string, body?: unknown, timeoutMs?: number): Promise<T> {
   await connection(); // every caller is request-time: never prerender a page against the API at build
   let res: Response;
   try {
@@ -13,6 +13,7 @@ async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Pr
       cache: "no-store",
       headers: { "content-type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
     });
   } catch {
     throw new Error(`API unreachable at ${API_URL}`);
@@ -21,5 +22,5 @@ async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Pr
   return res.json();
 }
 
-export const get = <T>(path: string) => call<T>("GET", path);
+export const get = <T>(path: string, timeoutMs?: number) => call<T>("GET", path, undefined, timeoutMs);
 export const post = <T>(path: string, body?: unknown) => call<T>("POST", path, body);

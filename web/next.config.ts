@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
   cacheComponents: false,
   turbopack: {
     rules: {
-      "*.css": {
+      // Tailwind transforms the global entry; CSS modules retain Next's scoping.
+      "globals.css": {
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
       },
