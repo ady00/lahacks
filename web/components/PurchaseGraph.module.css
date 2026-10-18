@@ -1,6 +1,8 @@
-.panel { border: 1px solid #dddddd; border-radius: 3px; padding: 28px; background: #fff; color: #0f172a; box-shadow: 0 10px 25px -5px #0f172a0d, 0 8px 10px -6px #0f172a05; }
+/* Values lifted from the Paper file "Optimistic unity", page "Purchase Graph". */
+.panel { border: 1px solid #dddddd; border-radius: 3px; padding: 28px; background: #d6d9ce85; color: #0f172a; box-shadow: 0 10px 25px -5px #0f172a0d, 0 8px 10px -6px #0f172a05; }
 .header { display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
 .subtitle { font-size: 13px; color: #475569; margin-top: 5px; }
+.hash { font-family: var(--font-mono); font-size: 11px; color: #94a3b8; margin-top: 5px; }
 .button { border: 1px solid #94a3b8; border-radius: 8px; padding: 8px 12px; background: white; color: #0f172a; font-size: 13px; cursor: pointer; }
 .button:disabled { opacity: .5; cursor: wait; }
 .button:focus-visible, .node:focus-visible { outline: 3px solid #9149c4; outline-offset: 3px; }
@@ -9,36 +11,38 @@
 .stage { position: relative; margin-top: 30px; }
 .wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .columnTitle { position: absolute; top: -23px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #64748b; }
-.node { position: absolute; text-align: left; border: 1px solid #cbd5e1; border-left-width: 4px; border-radius: 10px; background: white; padding: 10px 12px; font-size: 12px; overflow: hidden; }
+/* Cards sit on the olive ground with a soft drop shadow and no borders; status lives in the badge. */
+.node { position: absolute; text-align: left; border: 0; border-radius: 10px; background: white; box-shadow: 0 2px 3px #00000033; padding: 10px 12px; font-size: 12px; overflow: hidden; }
 button.node { cursor: pointer; }
 .fact { left: 0; width: 27%; height: 104px; }
 .rule { left: 39%; width: 37%; height: 138px; }
 .verdict { left: 83%; width: 17%; min-height: 90px; }
-.label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #475569; }
+.label { display: block; font-family: var(--font-display); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #512a6e; }
 .value { display: block; font-weight: 650; font-size: 15px; margin-top: 3px; overflow-wrap: anywhere; }
 .meta { display: block; color: #475569; font-size: 11px; margin-top: 3px; }
+.fact .meta { color: #406fb1; }
 .ruleText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 5px; line-height: 1.4; }
-.ruleLogic { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; color: #475569; margin-top: 4px; }
-.badge { display: inline-block; border-radius: 5px; padding: 2px 6px; font-size: 11px; font-weight: 650; }
-.violation, .violated { border-left-color: #dc2626; }
-.violation .badge, .violated .badge { color: #991b1b; background: #fee2e2; }
-.undetermined, .uncertain { border-left-color: #d97706; }
-.undetermined .badge, .uncertain .badge { color: #92400e; background: #fef3c7; }
-.compliant, .satisfied { border-left-color: #059669; }
-.compliant .badge, .satisfied .badge { color: #065f46; background: #d1fae5; }
-.inactive { border-left-color: #94a3b8; background: #f1f5f9; }
+.ruleLogic { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 10px; color: #475569; margin-top: 4px; }
+.badge { display: inline-block; border-radius: 5px; padding: 2px 8px; margin-top: 4px; font-size: 11px; font-weight: 650; }
+.violation .badge, .violated .badge { color: #fff1ef; background: #eb5e55; }
+.undetermined .badge, .uncertain .badge { color: #92400e; background: #ffee88; }
+.compliant .badge, .satisfied .badge { color: #eafff5; background: #4daa57; }
+.inactive { background: #f3f3f3; }
 .inactive .badge { color: #475569; background: #e2e8f0; }
 .selected { outline: 2px solid #9149c4; outline-offset: 2px; }
-.evidence { border-color: #dc2626; background: #fff1f2; }
-.dependency { border-color: #9149c4; background: #eff6ff; }
+.evidence { background: #fff1ef; }
+.dependency { box-shadow: 0 0 0 1.5px #c8bddb, 0 2px 3px #00000033; }
 .dim { opacity: .55; }
 .details { background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-top: 16px; font-size: 13px; }
 .details p { margin-top: 8px; overflow-wrap: anywhere; }
 .banner { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 12px 16px; margin: 16px 0; position: sticky; top: 8px; z-index: 10; font-size: 13px; }
 .compare { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 .compare > div { border-left-width: 4px; border-left-style: solid; padding-left: 8px; }
+.compare .violation { border-left-color: #eb5e55; }
+.compare .undetermined { border-left-color: #d9b400; }
+.compare .compliant { border-left-color: #4daa57; }
 .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
-.field { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 12px; background: white; }
+.field { border: 0; border-radius: 8px; padding: 10px; font-size: 12px; background: white; box-shadow: 0 2px 3px #00000033; }
 .field label { display: flex; gap: 7px; align-items: center; }
 .field select, .field input[type=number] { display: block; width: 100%; border: 1px solid #94a3b8; border-radius: 5px; padding: 7px; margin-top: 8px; background: white; }
 .error { border: 1px solid #fca5a5; background: #fff1f2; color: #991b1b; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 12px; }

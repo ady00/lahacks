@@ -19,6 +19,7 @@ const NAV = [
   ["Check", "/"],
   ["Ledger", "/ledger"],
   ["Rules", "/rules"],
+  ["Bank rules", "/bank-rules"],
   ["Evaluation", "/eval"],
 ] as const;
 
@@ -48,11 +49,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 Sample data
               </span>
             )}
-            <div className="hidden flex-1 items-center justify-center gap-8 md:flex">
+            <div className="hidden flex-1 items-center justify-center gap-6 md:flex">
               {NAV.map(([label, href]) => (
                 <NavLink key={href} href={href}>{label}</NavLink>
               ))}
-              {user?.manager && <NavLink href="/approvals">Approvals</NavLink>}
+              {user && <NavLink href="/you">For you</NavLink>}
+            {user?.manager && <NavLink href="/approvals">Approvals</NavLink>}
             </div>
             <span className="flex-1 md:hidden" />
             {user ? (

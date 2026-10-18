@@ -30,7 +30,7 @@ export default async function RulesPage({ searchParams }: PageProps<"/rules">) {
   const problems = draft ? (draft.dead ? 1 : 0) + draft.conflicts.length : 0;
   return (
     <>
-      <PageHeader title="Policy Studio" text="Write a policy in plain English. Claude turns it into a rule, Z3 proves it fits the others, and the next check runs against it.">
+      <PageHeader title="Policy Studio" text="Write a rule in plain English. Z3 checks it against the others before it goes live.">
         <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1 shadow-[0_2px_3px_#00000033]">
           <span className={`size-1.75 rounded-full ${audit.conflicts.length || audit.dead.length ? "bg-amber-500" : "bg-secondary"}`} />
           <span className="font-serif text-[11.5px] font-semibold text-ink">
@@ -132,7 +132,6 @@ export default async function RulesPage({ searchParams }: PageProps<"/rules">) {
 
       <section className={`${card} mt-9 space-y-2 p-7 text-sm`}>
         <h2 className={h2}>Consistency check</h2>
-        <p className={muted}>Z3 proves whether any rule can never fire and whether any two rules can disagree on the same purchase.</p>
         <p>
           <span className={muted}>Rules that can never fire: </span>
           {audit.dead.length ? audit.dead.join(", ") : "none"}
@@ -156,7 +155,6 @@ export default async function RulesPage({ searchParams }: PageProps<"/rules">) {
 
       <section className={`${card} mt-6 p-7`}>
         <h2 className={h2}>Facts the rules can use</h2>
-        <p className={`mb-3 mt-1 text-sm ${muted}`}>What a purchase is reduced to before Z3 sees it.</p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className={`text-left ${muted}`}>

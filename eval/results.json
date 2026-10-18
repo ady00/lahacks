@@ -1,0 +1,53 @@
+{
+ "as_of": "2026-10-17T23:31:34-07:00",
+ "n_heldout": 107,
+ "systems": [
+  {
+   "name": "Keyword rules",
+   "accuracy": 0.8318,
+   "citation_f1": 0.7769,
+   "rerun_agreement": 1.0,
+   "median_latency_ms": 0.01,
+   "cost_per_1k_usd": 0.0,
+   "questions_per_txn": 0
+  },
+  {
+   "name": "LLM judge",
+   "accuracy": 0.9907,
+   "citation_f1": 0.9798,
+   "rerun_agreement": 0.9333,
+   "median_latency_ms": 3750,
+   "cost_per_1k_usd": 10.757,
+   "questions_per_txn": 0
+  },
+  {
+   "name": "LLM facts + Z3",
+   "accuracy": 0.9813,
+   "citation_f1": 1.0,
+   "rerun_agreement": 1.0,
+   "median_latency_ms": 1964.05,
+   "cost_per_1k_usd": 5.3849,
+   "questions_per_txn": 0.0654
+  },
+  {
+   "name": "Jev + Z3",
+   "accuracy": 0.9907,
+   "citation_f1": 0.996,
+   "rerun_agreement": 1.0,
+   "median_latency_ms": 80.58,
+   "cost_per_1k_usd": 0.0275,
+   "questions_per_txn": 0.0561
+  }
+ ],
+ "notes": {
+  "policy_version": "857f9de17290",
+  "gold_vs_z3_agreement": 1.0,
+  "gold_vs_z3_disagreements": [],
+  "llm_rerun_subset": 30,
+  "llm_cli_calls": 274,
+  "llm_total_cost_usd": 1.9563,
+  "jev_price_usd_per_m_input_tokens": 0.042,
+  "jev_output_tokens_priced": 0,
+  "rerun": "Keyword rules and Jev + Z3: every case twice; LLM systems: a fixed random 30-case subset"
+ }
+}

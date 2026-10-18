@@ -49,6 +49,7 @@ Fourteen routes; every body and response is JSON, and paths are relative to `API
 | `GET /eval` | – | the evaluation table, `eval/results.json` as-is | 200 | dashboard Evaluation page |
 | `POST /data/reload` | – | `{transactions, employees, extractions, approvals, skipped}` | 200 | B, after refreshing the data files |
 | `GET /health` | – | `{ok, policy_version, stub}` | 200 | deploy checks |
+| `GET /employees/{employee_id}/rules` | – | `{employee, facts: {role, tenure_days}, rules: [{id, layer, text, applies, days_left}]}` | 200 · 404 | dashboard "What applies to you" page. `applies` false = Z3 proved the rule can never fire for this person; `days_left` is set when a rule stops applying after that many days (first-90-days rules) |
 
 `POST /check` fields: `text` is the new hire's words; `employee_id` picks the role from the employees table; `amount` in USD is optional and, when missing, the server takes the first `$…` in the text (no model involved); `timestamp` is ISO 8601 and defaults to now in Los Angeles; a date-only `YYYY-MM-DD` is accepted but leaves `hour` unknown, so the late and early meal rules go undetermined instead of firing at midnight. `amount` must be > 0. `POST /cases/{id}/answer` accepts any schema fact except `pre_approved`, which only `/approve` sets; the value must be in the fact's domain (amount > 0, hour 0–23, an enum value from its list). `/authorize` is idempotent: a second call returns the same `auth_id` and `proof_hash`; it answers 409 `amount unknown` on a compliant case whose amount was never given.
 
@@ -104,7 +105,7 @@ Every route that touches a purchase returns this one shape, re-proven by Z3 on e
 | `approval` | `{approver, approved, at}` or null | The latest manager decision. `approved: false` leaves the verdict a violation. |
 | `authorization` | authorization or null | Set after a successful `/authorize`. |
 
-Fact values and types: `role` ∈ employee, contractor, intern · `expense_kind` ∈ meal, rideshare, airfare, hotel, software, equipment, entertainment, other · `coded_account` ∈ meals_50, meals_100, entertainment_0, travel, office, other · `amount` number (USD) · `hour` 0–23 · `days_since_purchase` integer · `receipt_attached`, `pre_approved`, `client_present`, `at_company_event` booleans.
+Fact values and types: `role` ∈ employee, contractor, intern · `expense_kind` ∈ meal, rideshare, airfare, hotel, software, equipment, entertainment, other · `coded_account` ∈ meals_50, meals_100, entertainment_0, travel, office, other · `amount` number (USD) · `hour` 0–23 · `days_since_purchase` integer · `tenure_days` integer (days since the employee's `start_date`, source `employee`) · `receipt_attached`, `pre_approved`, `client_present`, `at_company_event` booleans.
 
 ## Other response shapes
 
@@ -213,7 +214,7 @@ The API turns probabilities into facts with fixed thresholds: known when `p >= 0
 
 | File | Columns or shape | Notes |
 | --- | --- | --- |
-| `data/employees.csv` | `employee_id,name,role,manager_id` | `role` ∈ employee, contractor, intern. Keep the four demo ids: `e_newhire` (employee), `e_intern`, `e_contractor`, `e_manager` (employee, no manager). The API seeds these if the file is missing. |
+| `data/employees.csv` | `employee_id,name,role,manager_id,job_title,department,level,location,start_date` | Worker-shaped record (Workday's sample fields). `role` ∈ employee, contractor, intern. `start_date` ISO date; the API derives `tenure_days` from it at the purchase date, and the first-90-days rules 10.1–10.3 read that fact. The five worker columns may be blank; a blank `start_date` leaves `tenure_days` unknown. `POST /employees` accepts the same optional fields and defaults `start_date` to today. Keep the four demo ids: `e_newhire` (employee), `e_intern`, `e_contractor`, `e_manager` (employee, no manager). The API seeds these if the file is missing. |
 | `data/transactions.csv` | `txn_id,company,employee_id,vendor,memo,amount,timestamp,qb_category,receipt_attached,receipt_date,source` | `timestamp` ISO 8601 with offset and a time part whenever the source has one (a date-only value leaves `hour` unknown); `receipt_attached` 0 or 1; `receipt_date` ISO date or empty; `source` ∈ intuit, injected. `amount` must be > 0: refunds and credits are skipped and listed under `skipped` in the reload response. Blank `receipt_attached` means unknown, not 0. `txn_id` unique across companies (prefix it with the company); re-loading upserts by `txn_id`. |
 | `data/extractions.jsonl` | one line per transaction: `{"txn_id": "t_000412", "facts": <extract() output>}` | Run `extract(memo)` offline once and write it here; the ledger audit reads this instead of calling Jev live. A transaction without a line is audited with those facts unknown. |
 | `data/approvals.csv` | `txn_id,approver,approved_at` | Pre-approvals that exist in the ledger history. A listed `txn_id` gets `pre_approved = true`. Reloading replaces the file-sourced approvals rather than appending. |

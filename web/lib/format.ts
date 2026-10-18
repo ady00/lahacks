@@ -24,6 +24,7 @@ const FACT_LABELS: Record<string, string> = {
   amount: "Amount",
   hour: "Hour of day",
   days_since_purchase: "Days since purchase",
+  tenure_days: "Days since start date",
   pre_approved: "Manager pre-approved",
   receipt_attached: "Receipt attached",
   coded_account: "Posts to account",

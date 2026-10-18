@@ -5,7 +5,7 @@ from engine.rules import Policy, load_policy
 P = load_policy("engine/demo_policy.json", "engine/irs_pack.json")
 P_RAW = json.load(open("engine/demo_policy.json")) + json.load(open("engine/irs_pack.json"))
 BASE = dict(role="employee", expense_kind="meal", client_present=False, at_company_event=False, amount=20, hour=12,
-            days_since_purchase=0, receipt_attached=True, pre_approved=True, coded_account="meals_50")
+            days_since_purchase=0, receipt_attached=True, pre_approved=True, coded_account="meals_50", tenure_days=400)
 ENT = dict(BASE, expense_kind="entertainment", coded_account="entertainment_0")
 
 CASES = [
@@ -25,6 +25,9 @@ CASES = [
   ("8.1", dict(BASE, expense_kind="software", coded_account="office", pre_approved=False), dict(BASE, expense_kind="software", coded_account="office")),
   ("8.2", dict(BASE, expense_kind="equipment", coded_account="office", amount=251, receipt_attached=False), dict(BASE, expense_kind="equipment", coded_account="office", amount=250, receipt_attached=False)),
   ("9.1", dict(BASE, expense_kind="rideshare", coded_account="travel", amount=76, pre_approved=False), dict(BASE, expense_kind="rideshare", coded_account="travel", amount=75, pre_approved=False)),
+  ("10.1", dict(BASE, expense_kind="equipment", coded_account="office", tenure_days=89, pre_approved=False), dict(BASE, expense_kind="equipment", coded_account="office", tenure_days=90, pre_approved=False)),
+  ("10.2", dict(BASE, expense_kind="hotel", coded_account="travel", tenure_days=10, pre_approved=False), dict(BASE, expense_kind="hotel", coded_account="travel", tenure_days=10)),
+  ("10.3", dict(ENT, tenure_days=0), dict(ENT, tenure_days=90)),
   ("IRS-meal", dict(BASE, coded_account="meals_100"), dict(BASE)),
   ("IRS-meal-event", dict(BASE, at_company_event=True), dict(BASE, at_company_event=True, coded_account="meals_100")),
   ("IRS-ent", dict(ENT, coded_account="other"), dict(ENT)),
@@ -47,7 +50,7 @@ def test_each_rule_bites_and_releases(rule_id, breaking, passing):
 
 
 def test_every_rule_has_a_case():
-    assert {c[0] for c in CASES} == set(P.by_id) and len(P.rules) == 24
+    assert {c[0] for c in CASES} == set(P.by_id) and len(P.rules) == 27
 
 
 def test_demo_policy_has_no_dead_rules_or_conflicts():

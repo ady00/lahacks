@@ -59,6 +59,20 @@ export default async function LoginPage() {
               ))}
             </select>
           </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="font-medium">Job title <span className="font-normal text-[#94A3B8]">(optional)</span></span>
+              <input name="job_title" className={`mt-1 ${input}`} />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium">Department <span className="font-normal text-[#94A3B8]">(optional)</span></span>
+              <input name="department" className={`mt-1 ${input}`} />
+            </label>
+          </div>
+          <label className="block text-sm">
+            <span className="font-medium">Start date <span className="font-normal text-[#94A3B8]">(optional; blank means you started today)</span></span>
+            <input name="start_date" type="date" className={`mt-1 ${input}`} />
+          </label>
           <button className={btnPrimary}>Create account and sign in</button>
         </form>
       </div>

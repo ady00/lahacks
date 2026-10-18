@@ -232,6 +232,11 @@ class EmployeeIn(_M):
     name: str
     role: Literal["employee", "contractor", "intern"]
     manager_id: str = ""
+    job_title: str = ""
+    department: str = ""
+    level: str = ""
+    location: str = ""
+    start_date: str = ""  # YYYY-MM-DD; blank = today (a new account is a new hire)
 
 
 class Employee(_M):
@@ -239,7 +244,26 @@ class Employee(_M):
     name: str
     role: str
     manager_id: str
+    job_title: str = ""
+    department: str = ""
+    level: str = ""
+    location: str = ""
+    start_date: str = ""
 
 
 class EmployeeList(_M):
     employees: list[Employee]
+
+
+class ApplicableRule(_M):
+    id: str
+    layer: str
+    text: str
+    applies: bool            # can this rule ever fire for this person, given role and tenure
+    days_left: int | None    # set when the rule stops applying after this many more days (probation rules)
+
+
+class ApplicableOut(_M):
+    employee: Employee
+    facts: dict[str, Scalar]  # the standing facts the answer rests on: role, tenure_days
+    rules: list[ApplicableRule]

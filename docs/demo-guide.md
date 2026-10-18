@@ -48,7 +48,7 @@ Sign-in is a cookie, no password. Use one profile per person so both stay signed
 ## Things to avoid on stage
 
 - After 10 pm local time a meal with no timestamp also trips rule 6.1 (meals after 10 pm), so the card lists two violations. Fine as a talking point, confusing as an opener. The seeded dinner avoids it because its time is explicit; a typed check uses the clock.
-- The Evaluation page is empty until `eval/results.json` exists, and the amber "Sample data" chip in the header means only that. Skip the page, or hide the link.
+- The Evaluation page is real now: 107 held-out purchases, four systems. Read the Jev + Z3 row off the screen and name a miss before the judge asks. If the amber "Sample data" chip shows in the header, `eval/results.json` is missing on that machine.
 - Clicking Approve twice is harmless. Replaying Authorize on a violation returns a 409 and an error page.
 
 ## Where the data comes from

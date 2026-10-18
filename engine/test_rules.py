@@ -360,7 +360,8 @@ def test_one_model_check_matches_per_rule_solver_reference():
         return ("compliant", [], [r.id for r in p.rules if not sat(z3.Not(r.when))])
 
     pick = {"amount": [5, 20, 25, 25.01, 35, 35.01, 74.99, 75, 100, 101, 150, 151, 250, 251, 300, 301, 500, 501],
-            "hour": [0, 5, 6, 12, 21, 22, 23], "days_since_purchase": [0, 1, 14, 15, 60, 61, 75]}
+            "hour": [0, 5, 6, 12, 21, 22, 23], "days_since_purchase": [0, 1, 14, 15, 60, 61, 75],
+            "tenure_days": [0, 30, 89, 90, 400]}
     CODE = {"meal": "meals_50", "rideshare": "travel", "airfare": "travel", "hotel": "travel", "software": "office",
             "equipment": "office", "entertainment": "entertainment_0", "other": "other"}
     seen = {"compliant": 0, "violation": 0, "undetermined": 0}

@@ -113,6 +113,19 @@ def _valid(name, value):
 
 
 # ---- facts -> case ----
+def standing_facts(employee: dict | None, on: date | None = None) -> dict:
+    """The facts an employee record alone decides: role, and tenure_days as of `on` (default today)."""
+    out = {}
+    if (role := _valid("role", (employee or {}).get("role"))) is not None:
+        out["role"] = role
+    try:
+        start = date.fromisoformat((employee or {}).get("start_date") or "")
+        out["tenure_days"] = max(0, ((on or now_la().date()) - start).days)
+    except ValueError:
+        pass
+    return out
+
+
 def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=None, model_source="jev"):
     """-> (facts, probs, sources). `probs` given = re-proving a stored case without calling the model again."""
     probs = extract(text) if probs is None else probs
@@ -121,8 +134,8 @@ def build_facts(text, employee, amount, ts, has_time, answers, approved, probs=N
     def put(name, value, source):
         facts[name], sources[name] = value, source
 
-    if (role := _valid("role", (employee or {}).get("role"))) is not None:
-        put("role", role, "employee")
+    for name, value in standing_facts(employee, ts.date()).items():
+        put(name, value, "employee")
     for name, value in facts_from_probs(probs).items():
         put(name, value, model_source)
     if amount is not None:
@@ -277,14 +290,15 @@ def decide_transaction(txn: dict, extraction: dict | None, pre_approved: bool, e
         if (value := _valid(name, value)) is not None:
             facts[name], sources[name] = value, source
 
-    put("role", (employee or {}).get("role"), "employee")
-    for name, value in facts_from_probs(probs).items():
-        put(name, value, "jev")
-    put("amount", t["amount"], "ledger")  # <= 0 or missing: unknown, never an all-rules-violated proof
     try:
         ts, has_time = parse_ts(t.get("timestamp")) if t.get("timestamp") else (None, False)
     except ValueError:
         ts, has_time = None, False
+    for name, value in standing_facts(employee, ts.date() if ts else None).items():
+        put(name, value, "employee")
+    for name, value in facts_from_probs(probs).items():
+        put(name, value, "jev")
+    put("amount", t["amount"], "ledger")  # <= 0 or missing: unknown, never an all-rules-violated proof
     if ts is not None:
         if has_time:
             put("hour", ts.hour, "derived")

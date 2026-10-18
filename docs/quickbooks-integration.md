@@ -86,6 +86,23 @@ A hackathon demo and a small company fit inside the free tier by a wide margin.
 3. CDC polling on a timer, then webhooks. One day.
 4. Receipt upload from the case page. Half a day.
 
+## How long it would take (estimated 2026-10-17, 23:40)
+
+One person, the API already running, nothing built yet. The hackathon gates are 02:00 and 10:30.
+
+| Step | What it is | Time | Risk |
+| --- | --- | --- | --- |
+| 0 | Intuit developer account, create an app, copy sandbox client id and secret, add `http://localhost:8000/qbo/callback` as a redirect URI | 20 min | Sign-up e-mail verification; nothing else gates sandbox keys |
+| 1 | `GET /qbo/connect` (redirect) and `GET /qbo/callback` (code → tokens, store `realm_id, access_token, refresh_token, expires_at` in one SQLite table), refresh when `expires_at` is near | 1.5 h | Refresh tokens rotate on every refresh; store the newest or the connection dies after an hour |
+| 2 | `POST /qbo/sync`: query `Purchase` since a date, map to the `transactions.csv` columns above, write the file, call the existing `load_data_dir` | 1.5 h | The sandbox company has no per-employee field, so every row lands on one demo employee unless a `Class` or custom field is mapped first; `TxnDate` is date-only, so `hour` stays unknown (already handled) |
+| 3 | Dashboard: "Connect QuickBooks" button and a "Last synced" line on the Ledger page | 30 min | None; one anchor and one line |
+| 4 | Write-back on authorize: sparse update of `AccountRef` and `PrivateNote` with the proof hash | 1.5 h | Sparse updates need the current `SyncToken`; read before write |
+| 5 | Change data capture poll every few minutes, then webhooks | 1 h, then 1 h | Webhooks need a public URL (the Vultr host) and the CloudEvents payload |
+
+Read-only demo (steps 0 to 3): about 4 hours, so finished by roughly 04:00 if started now, which is after the 02:00 gate and well before 10:30. With write-back (step 4): about 5.5 hours. Polling and webhooks are not worth doing before judging; a manual Sync button tells the same story.
+
+Verdict: doable overnight by one person, with the demo risk concentrated in step 0 (account creation) and the employee mapping in step 2. Everything downstream of the CSV is already built and tested, so the engine, the case shape and the Ledger page do not change.
+
 ## Sources
 
 - Intuit OAuth FAQ (token lifetimes): https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/faq

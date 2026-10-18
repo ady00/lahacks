@@ -53,6 +53,8 @@ def phrase(fact: str, value) -> str:
             return f"at {value}:00"
         if fact == "days_since_purchase":
             return f"{value} days ago"
+        if fact == "tenure_days":
+            return f"{value} days since start date"
     except TypeError:  # unhashable value
         pass
     return f"{fact} {value}"

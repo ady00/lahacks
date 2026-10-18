@@ -225,7 +225,8 @@ def test_reviewer_employees_csv_beats_seed_across_reconnects(tmp_path):
     for _ in range(3):  # repeated connects (re-run init) must not revert B's rows to the seed
         with closing(db.connect(p)) as conn:
             assert db.employee(conn, "e_manager") == {"employee_id": "e_manager", "name": "Zoë Ünïcode",
-                                                      "role": "manager", "manager_id": ""}
+                                                      "role": "manager", "manager_id": "", "job_title": "", "department": "",
+                                                      "level": "", "location": "", "start_date": ""}
             assert db.employee(conn, "e_intern")["role"] == "employee"
             assert conn.execute("select count(*) from employees").fetchone()[0] == 4
 
@@ -234,7 +235,7 @@ def test_reviewer_seed_not_reinserted_when_table_has_only_b_rows(tmp_path):
     p = tmp_path / "t.db"
     with closing(db.connect(p)) as conn:
         conn.execute("DELETE FROM employees")
-        conn.execute("INSERT INTO employees VALUES ('z1','Zed','intern','')")
+        conn.execute("INSERT INTO employees(employee_id,name,role,manager_id) VALUES ('z1','Zed','intern','')")
         conn.commit()
     with closing(db.connect(p)) as conn:
         assert [r[0] for r in conn.execute("select employee_id from employees")] == ["z1"]

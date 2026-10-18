@@ -136,11 +136,11 @@ export function PurchaseGraph({ initialGraph, awaitingApproval, children }: {
     </fieldset>
     <section className={styles.panel} aria-label="Purchase explanation">
       <div className={styles.header}>
-        <div><h2 className="text-lg font-semibold">Why the rules decided this</h2><p className={styles.subtitle}>Each fact on the left feeds the rules it touches; the rules decide the verdict on the right.</p></div>
+        <div><h2 className="font-serif text-[18px] font-bold tracking-[-0.02em] text-ink">{current?.verdict === "violation" ? "Violation Overview" : "Rule Overview"}</h2>
+          {initialGraph && <p className={styles.hash}>Policy {initialGraph.policy_version} · Facts {initialGraph.base_facts_hash.slice(0, 10)}</p>}</div>
         {initialGraph && !previewMode && <button type="button" className={styles.button} onClick={() => setPreviewMode(true)}>What if?</button>}
       </div>
       {!initialGraph ? <p className={styles.subtitle}>The rule-by-rule graph is not available for this case. <button className={styles.button} onClick={() => router.refresh()}>Try again</button></p> : <>
-        <p className={styles.subtitle}>Policy {initialGraph.policy_version} · Facts {initialGraph.base_facts_hash.slice(0, 10)}</p>
         {previewMode && <>
           <div className={styles.banner} role="status">
             <strong>Hypothetical—no changes saved</strong>
@@ -151,7 +151,7 @@ export function PurchaseGraph({ initialGraph, awaitingApproval, children }: {
             </div>
           </div>
           <form onSubmit={submit}>
-            <p className={styles.subtitle}>Select facts to override. Choose “Unknown” or clear a number to remove that fact for this preview. Rule-derived accounting classifications are recomputed.</p>
+            <p className={styles.subtitle}>Override facts below. Pick “Unknown” to drop one.</p>
             <div className={styles.fields}>
               {initialGraph.editable_fields.map(field => {
                 const enabled = Object.hasOwn(edits, field.name);

@@ -1,5 +1,5 @@
-employee_id,name,role,manager_id
-e_newhire,Sam Lee,employee,e_manager
-e_intern,Ria Patel,intern,e_manager
-e_contractor,Jo Kim,contractor,e_manager
-e_manager,Dana Ortiz,employee,
+employee_id,name,role,manager_id,job_title,department,level,location,start_date
+e_newhire,Sam Lee,employee,e_manager,Associate Product Manager,Product,P1,Los Angeles,2026-09-21
+e_intern,Ria Patel,intern,e_manager,Software Engineering Intern,Engineering,I1,Los Angeles,2026-09-29
+e_contractor,Jo Kim,contractor,e_manager,Design Contractor,Design,C,Remote,2026-03-02
+e_manager,Dana Ortiz,employee,,Director of Product,Product,M3,Los Angeles,2023-05-15

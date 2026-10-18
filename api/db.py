@@ -17,14 +17,17 @@ CREATE TABLE IF NOT EXISTS verdicts(txn_id TEXT, policy_version TEXT, verdict TE
 CREATE TABLE IF NOT EXISTS approvals(id INTEGER PRIMARY KEY AUTOINCREMENT, case_id TEXT, txn_id TEXT, approver TEXT,
   approved INTEGER, at TEXT);
 CREATE TABLE IF NOT EXISTS policy_versions(version TEXT PRIMARY KEY, rules_json TEXT, loaded_at TEXT);
-CREATE TABLE IF NOT EXISTS employees(employee_id TEXT PRIMARY KEY, name TEXT, role TEXT, manager_id TEXT);
+CREATE TABLE IF NOT EXISTS employees(employee_id TEXT PRIMARY KEY, name TEXT, role TEXT, manager_id TEXT,
+  job_title TEXT DEFAULT '', department TEXT DEFAULT '', level TEXT DEFAULT '', location TEXT DEFAULT '', start_date TEXT DEFAULT '');
 CREATE TABLE IF NOT EXISTS rules(id TEXT PRIMARY KEY, rule_json TEXT, created_at TEXT);
 """
+# Worker-shaped record (Workday's sample fields): title, department, level, location, start date. Tenure is derived.
+EMP_COLS = ["employee_id", "name", "role", "manager_id", "job_title", "department", "level", "location", "start_date"]
 SEED_EMPLOYEES = [
-    ("e_newhire", "Sam Lee", "employee", "e_manager"),
-    ("e_intern", "Ria Patel", "intern", "e_manager"),
-    ("e_contractor", "Jo Kim", "contractor", "e_manager"),
-    ("e_manager", "Dana Ortiz", "employee", ""),
+    ("e_newhire", "Sam Lee", "employee", "e_manager", "Associate Product Manager", "Product", "P1", "Los Angeles", "2026-09-21"),
+    ("e_intern", "Ria Patel", "intern", "e_manager", "Software Engineering Intern", "Engineering", "I1", "Los Angeles", "2026-09-29"),
+    ("e_contractor", "Jo Kim", "contractor", "e_manager", "Design Contractor", "Design", "C", "Remote", "2026-03-02"),
+    ("e_manager", "Dana Ortiz", "employee", "", "Director of Product", "Product", "M3", "Los Angeles", "2023-05-15"),
 ]
 TXN_COLS = ["txn_id", "company", "employee_id", "vendor", "memo", "amount", "timestamp", "qb_category",
             "coded_account", "receipt_attached", "receipt_date", "source", "extraction_json"]
@@ -39,8 +42,12 @@ def connect(path=None) -> sqlite3.Connection:
 
 def init(conn):
     conn.executescript(SCHEMA)
+    have = {r[1] for r in conn.execute("PRAGMA table_info(employees)")}
+    for c in EMP_COLS:  # a pop.db from before the worker fields: add the columns in place
+        if c not in have:
+            conn.execute(f"ALTER TABLE employees ADD COLUMN {c} TEXT DEFAULT ''")
     if not conn.execute("SELECT 1 FROM employees LIMIT 1").fetchone():  # OR IGNORE: concurrent first connections race here
-        conn.executemany("INSERT OR IGNORE INTO employees VALUES (?,?,?,?)", SEED_EMPLOYEES)
+        conn.executemany(f"INSERT OR IGNORE INTO employees VALUES ({','.join('?' * len(EMP_COLS))})", SEED_EMPLOYEES)
     conn.commit()
 
 
@@ -170,9 +177,8 @@ def load_data_dir(conn, data_dir=None) -> dict:
     d = Path(data_dir or os.environ.get("POP_DATA_DIR", "data"))
     out = {"transactions": 0, "employees": 0, "extractions": 0, "approvals": 0, "skipped": []}
     if (p := d / "employees.csv").exists():
-        emps = [(r["employee_id"], r.get("name") or "", r.get("role") or "", r.get("manager_id") or "")
-                for r in _csv(p) if r.get("employee_id")]
-        conn.executemany("INSERT OR REPLACE INTO employees VALUES (?,?,?,?)", emps)
+        emps = [tuple(r.get(c) or "" for c in EMP_COLS) for r in _csv(p) if r.get("employee_id")]
+        conn.executemany(f"INSERT OR REPLACE INTO employees VALUES ({','.join('?' * len(EMP_COLS))})", emps)
         out["employees"] = len(emps)
     if (p := d / "approvals.csv").exists():
         conn.execute("DELETE FROM approvals WHERE case_id IS NULL")  # file rows only; /approve rows survive
@@ -234,8 +240,8 @@ def load_data_dir(conn, data_dir=None) -> dict:
     return out
 
 
-def add_employee(conn, employee_id, name, role, manager_id):
-    conn.execute("INSERT INTO employees VALUES (?,?,?,?)", (employee_id, name, role, manager_id))
+def add_employee(conn, row: dict):
+    conn.execute(f"INSERT INTO employees VALUES ({','.join('?' * len(EMP_COLS))})", tuple(row.get(c) or "" for c in EMP_COLS))
     conn.commit()
 
 

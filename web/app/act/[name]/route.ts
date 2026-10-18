@@ -21,10 +21,12 @@ export async function POST(req: Request, ctx: RouteContext<"/act/[name]">) {
     case "signup": {
       const kind = str(f, "kind");
       const manager = kind === "manager";
+      const optional = Object.fromEntries(["job_title", "department", "start_date"].map((k) => [k, str(f, k)]).filter(([, v]) => v));
       const e = await post<Employee>("/employees", {
         name: str(f, "name"),
         role: manager ? "employee" : kind,
         manager_id: manager ? "" : "e_manager",
+        ...optional, // blank ones stay out so the API's defaults apply (start_date = today)
       });
       return redirectTo(req, "/", { employee_id: e.employee_id, name: e.name, manager });
     }

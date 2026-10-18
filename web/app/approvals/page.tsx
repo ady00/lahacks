@@ -25,7 +25,7 @@ export default async function ApprovalsPage() {
       <meta httpEquiv="refresh" content="5" />
       <PageHeader
         title={cases.length === 1 ? "1 purchase waiting for your approval" : `${cases.length} purchases waiting for your approval`}
-        text="Approving marks the purchase pre-approved and the rules re-check it. This list refreshes on its own."
+        text="Approve or reject. The rules re-check and the requester's page updates on its own."
       />
       {cases.length === 0 ? (
         <p className={muted}>Nothing is waiting. New requests appear here within a few seconds.</p>

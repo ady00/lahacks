@@ -328,6 +328,27 @@ class Policy:
     def _facts_from_model(self, model: z3.ModelRef) -> dict[str, object]:
         return {n: from_z3(n, model.eval(v, model_completion=True)) for n, v in self.vars.items()}
 
+    def applicable(self, facts: dict) -> list[dict]:
+        return _locked(self._applicable, facts)
+
+    def _applicable(self, facts: dict) -> list[dict]:
+        """A person's standing facts (role, tenure_days) -> every rule with whether it can still fire for them,
+        and, for a rule that only holds while tenure_days is below a bound, how many more days it applies."""
+        eqs = self._facts_eq(facts)
+        out = []
+        for r in self.rules:
+            fires = _sat(*self.dom, *eqs.values(), r.when)
+            days_left = None
+            if fires and "tenure_days" in facts and "tenure_days" in _names(r.raw["when"]):
+                t = self.vars["tenure_days"]
+                o = z3.Optimize()
+                o.add(*self.dom, *[eq for n, eq in eqs.items() if n != "tenure_days"], r.when, t >= facts["tenure_days"])
+                h = o.maximize(t)
+                if o.check() == z3.sat and z3.is_int_value(o.upper(h)):  # bounded: the rule stops holding past this day
+                    days_left = o.upper(h).as_long() - facts["tenure_days"] + 1
+            out.append({"id": r.id, "layer": r.layer, "text": r.text, "applies": fires, "days_left": days_left})
+        return out
+
     def audit(self) -> dict:
         return _locked(self._audit)
 

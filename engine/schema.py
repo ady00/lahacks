@@ -19,6 +19,7 @@ FACTS: dict[str, FactSpec] = {
     "amount": FactSpec("real", None, 0, None, True, 3, False),
     "hour": FactSpec("int", None, 0, 23, False, 0, False),
     "days_since_purchase": FactSpec("int", None, 0, None, False, 0, False),
+    "tenure_days": FactSpec("int", None, 0, None, False, 0, False),  # days since the employee record's start_date
     "receipt_attached": FactSpec("bool", None, None, None, True, 1, False),
     "pre_approved": FactSpec("bool", None, None, None, True, 2, False),
     "client_present": FactSpec("bool", None, None, None, False, 0, False),

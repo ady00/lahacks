@@ -22,6 +22,7 @@ LABEL = {
     "role": "Role", "expense_kind": "Expense kind", "coded_account": "Coded account", "amount": "Amount",
     "hour": "Hour of purchase", "days_since_purchase": "Days since purchase", "receipt_attached": "Receipt attached",
     "pre_approved": "Pre-approved", "client_present": "Client present", "at_company_event": "At company event",
+    "tenure_days": "Days since start date",
 }
 _OPS = {"eq": "is", "neq": "is not", "gt": ">", "ge": "≥", "lt": "<", "le": "≤"}
 

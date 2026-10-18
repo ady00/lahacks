@@ -1,11 +1,11 @@
 import { get, post } from "@/lib/api";
 import { requireUser } from "@/lib/session";
-import type { EmployeeList, PolicyAudit, PolicyOut } from "@/lib/types";
+import type { ApplicableOut, EmployeeList, PolicyAudit, PolicyOut } from "@/lib/types";
 import { PageHeader } from "@/components/PageHeader";
 import { RuleRow } from "@/components/RuleRow";
 import type { Rule } from "@/lib/types";
 import { Bolt, Chevron, Sparkle, Wand } from "@/components/icons";
-import { btn, btnPrimary, card, chip, eyebrow, h2, mono } from "@/lib/ui";
+import { btn, btnPrimary, card, chip, eyebrow, h2, mono, muted } from "@/lib/ui";
 
 const EXAMPLES = [
   "Client dinner Thursday with Acme's CFO, about $48.",
@@ -18,11 +18,13 @@ const EXAMPLES = [
 // redirects to the case, so a refresh never creates a second case.
 export default async function Home() {
   const user = await requireUser();
-  const [policy, audit, { employees }] = await Promise.all([
+  const [policy, audit, { employees }, you] = await Promise.all([
     get<PolicyOut>("/policy"),
     post<PolicyAudit>("/policy/audit"),
     get<EmployeeList>("/employees"),
+    get<ApplicableOut>(`/employees/${encodeURIComponent(user.employee_id)}/rules`).catch(() => null),
   ]);
+  const probation = you?.rules.filter((r) => r.applies && r.days_left != null) ?? [];
   const rules = policy.rules as Rule[];
   const role = employees.find((e) => e.employee_id === user.employee_id)?.role ?? "employee";
   const conflicts = audit.conflicts.length + audit.dead.length;
@@ -31,11 +33,17 @@ export default async function Home() {
     <>
       <PageHeader
         title={`Can I buy this, ${first}?`}
-        text="Describe the purchase in your own words. Z3 checks every policy rule and proves the answer in a second: allowed, needs approval, or one more detail."
+        text="Describe it in your own words. You get a proven answer: allowed, needs approval, or one more question."
       >
         <a href="/ledger" className={btn}>Open ledger</a>
         <a href="/rules" className={btn}>See the rules</a>
       </PageHeader>
+      {probation.length > 0 && (
+        <p className={`-mt-3 pb-5 text-[12px] ${muted}`}>
+          {`${probation.length} first-90-days ${probation.length === 1 ? "rule applies" : "rules apply"} to you for ${probation[0].days_left} more days · `}
+          <a href="/you" className="font-semibold text-secondary hover:underline">See what applies to you</a>
+        </p>
+      )}
 
       <form method="get" action="/check" className={card}>
         <div className="space-y-3.5 border-b border-[#F1F5F9] bg-gradient-to-b from-[#FAFAF9] to-white px-5 pb-5 pt-6 sm:px-7">

@@ -106,6 +106,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cases/{case_id}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Graph */
+        get: operations["get_graph_cases__case_id__graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cases/{case_id}/graph/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Graph */
+        post: operations["preview_graph_cases__case_id__graph_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ledger": {
         parameters: {
             query?: never;
@@ -191,6 +225,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/policy/rules/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rule Draft
+         * @description Natural language -> a rule, checked by Z3 but not saved.
+         */
+        post: operations["rule_draft_policy_rules_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/policy/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rule Add
+         * @description Save a rule (as drafted, or hand-written) and swap the live policy; cases from now on prove against it.
+         */
+        post: operations["rule_add_policy_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/policy/rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Rule Delete */
+        delete: operations["rule_delete_policy_rules__rule_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bank-rules/check": {
         parameters: {
             query?: never;
@@ -260,6 +351,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/employees/{employee_id}/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Applicable Rules
+         * @description What applies to you: every rule, proven against this person's role and tenure, with days left on probation rules.
+         */
+        get: operations["applicable_rules_employees__employee_id__rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -270,6 +381,29 @@ export interface components {
             fact: string;
             /** Value */
             value: boolean | string | number;
+        };
+        /** ApplicableOut */
+        ApplicableOut: {
+            employee: components["schemas"]["Employee"];
+            /** Facts */
+            facts: {
+                [key: string]: boolean | string | number | null;
+            };
+            /** Rules */
+            rules: components["schemas"]["ApplicableRule"][];
+        };
+        /** ApplicableRule */
+        ApplicableRule: {
+            /** Id */
+            id: string;
+            /** Layer */
+            layer: string;
+            /** Text */
+            text: string;
+            /** Applies */
+            applies: boolean;
+            /** Days Left */
+            days_left: number | null;
         };
         /** Approval */
         Approval: {
@@ -422,6 +556,31 @@ export interface components {
             role: string;
             /** Manager Id */
             manager_id: string;
+            /**
+             * Job Title
+             * @default
+             */
+            job_title: string;
+            /**
+             * Department
+             * @default
+             */
+            department: string;
+            /**
+             * Level
+             * @default
+             */
+            level: string;
+            /**
+             * Location
+             * @default
+             */
+            location: string;
+            /**
+             * Start Date
+             * @default
+             */
+            start_date: string;
         };
         /** EmployeeIn */
         EmployeeIn: {
@@ -437,6 +596,31 @@ export interface components {
              * @default
              */
             manager_id: string;
+            /**
+             * Job Title
+             * @default
+             */
+            job_title: string;
+            /**
+             * Department
+             * @default
+             */
+            department: string;
+            /**
+             * Level
+             * @default
+             */
+            level: string;
+            /**
+             * Location
+             * @default
+             */
+            location: string;
+            /**
+             * Start Date
+             * @default
+             */
+            start_date: string;
         };
         /** EmployeeList */
         EmployeeList: {
@@ -571,6 +755,18 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** PreviewIn */
+        PreviewIn: {
+            /**
+             * Overrides
+             * @default {}
+             */
+            overrides: {
+                [key: string]: unknown;
+            };
+            /** Base Facts Hash */
+            base_facts_hash: string;
+        };
         /** Question */
         Question: {
             /** Fact */
@@ -603,6 +799,31 @@ export interface components {
             text: string;
             /** Count */
             count: number;
+        };
+        /** RuleDraft */
+        RuleDraft: {
+            /** Rule */
+            rule: {
+                [key: string]: unknown;
+            };
+            /** Dead */
+            dead: boolean;
+            /** Conflicts */
+            conflicts: components["schemas"]["Conflict"][];
+        };
+        /** RuleIn */
+        RuleIn: {
+            /** Text */
+            text: string;
+            /** When */
+            when: unknown;
+            /** Require */
+            require: unknown;
+        };
+        /** RuleText */
+        RuleText: {
+            /** Text */
+            text: string;
         };
         /** Shadowed */
         Shadowed: {
@@ -840,6 +1061,72 @@ export interface operations {
             };
         };
     };
+    get_graph_cases__case_id__graph_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_graph_cases__case_id__graph_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ledger_ledger_get: {
         parameters: {
             query?: {
@@ -967,6 +1254,103 @@ export interface operations {
             };
         };
     };
+    rule_draft_policy_rules_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleText"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleDraft"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rule_add_policy_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rule_delete_policy_rules__rule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     check_bank_rules_bank_rules_check_post: {
         parameters: {
             query?: never;
@@ -1080,6 +1464,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Employee"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    applicable_rules_employees__employee_id__rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicableOut"];
                 };
             };
             /** @description Validation Error */

@@ -30,5 +30,11 @@
   {"id": "8.2", "layer": "company", "text": "Equipment over $250 needs pre-approval and a receipt.",
    "when": {"and": [{"eq": ["expense_kind", "equipment"]}, {"gt": ["amount", 250]}]}, "require": {"and": ["pre_approved", "receipt_attached"]}},
   {"id": "9.1", "layer": "company", "text": "Rideshare over $75 needs pre-approval.",
-   "when": {"and": [{"eq": ["expense_kind", "rideshare"]}, {"gt": ["amount", 75]}]}, "require": "pre_approved"}
+   "when": {"and": [{"eq": ["expense_kind", "rideshare"]}, {"gt": ["amount", 75]}]}, "require": "pre_approved"},
+  {"id": "10.1", "layer": "company", "text": "In your first 90 days, equipment needs pre-approval at any price.",
+   "when": {"and": [{"lt": ["tenure_days", 90]}, {"eq": ["expense_kind", "equipment"]}]}, "require": "pre_approved"},
+  {"id": "10.2", "layer": "company", "text": "In your first 90 days, hotels need pre-approval at any price.",
+   "when": {"and": [{"lt": ["tenure_days", 90]}, {"eq": ["expense_kind", "hotel"]}]}, "require": "pre_approved"},
+  {"id": "10.3", "layer": "company", "text": "In your first 90 days, entertainment is not reimbursed.",
+   "when": {"and": [{"lt": ["tenure_days", 90]}, {"eq": ["expense_kind", "entertainment"]}]}, "require": false}
 ]
